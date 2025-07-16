@@ -17,6 +17,7 @@ let records = [
 export const handlers = [
   rest.post('http://localhost:5000/api/login', (req, res, ctx) => {
     const { username, password } = req.body;
+    console.log('Login request:', { username, password }); // Debug log
     if (username === 'admin' && password === 'admin123') {
       return res(
         ctx.set('Access-Control-Allow-Origin', '*'),
@@ -181,6 +182,14 @@ export const handlers = [
     );
   }),
   rest.get('http://localhost:5000/api/records', (req, res, ctx) => {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer mock-')) {
+      return res(
+        ctx.set('Access-Control-Allow-Origin', '*'),
+        ctx.status(401),
+        ctx.json({ message: 'Unauthorized' })
+      );
+    }
     const page = parseInt(req.url.searchParams.get('page') || '1', 10);
     const perPage = 10;
     const start = (page - 1) * perPage;
@@ -195,6 +204,14 @@ export const handlers = [
     );
   }),
   rest.post('http://localhost:5000/api/records', (req, res, ctx) => {
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer mock-')) {
+      return res(
+        ctx.set('Access-Control-Allow-Origin', '*'),
+        ctx.status(401),
+        ctx.json({ message: 'Unauthorized' })
+      );
+    }
     const { patient_id, diagnosis, prescription, vital_signs } = req.body;
     const patient = patients.find((p) => p.id === parseInt(patient_id));
     if (!patient) {
