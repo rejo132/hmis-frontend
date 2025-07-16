@@ -1,11 +1,10 @@
+// Correct JavaScript format (not JSON)
 module.exports = {
-    testEnvironment: 'jsdom',
-    transform: {
-      '^.+\\.[jt]sx?$': 'babel-jest',
-    },
-    transformIgnorePatterns: [
-      '/node_modules/(?!axios)/',
-    ],
-    moduleFileExtensions: ['js', 'jsx'],
-  };
-  
+  transform: {
+    "^.+\\.(js|jsx)$": "babel-jest"
+  },
+  transformIgnorePatterns: [
+    "/node_modules/(?!axios)/"
+  ],
+  testEnvironment: "jsdom"
+};
