@@ -1,28 +1,17 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { store } from '../store';
 import PatientForm from '../components/PatientForm';
 import { BrowserRouter } from 'react-router-dom';
+import { login } from '../slices/authSlice';
 
 describe('PatientForm Component', () => {
-  test('renders add patient form', () => {
-    render(
-      <Provider store={store}>
-        <BrowserRouter>
-          <PatientForm />
-        </BrowserRouter>
-      </Provider>
-    );
-
-    // Covers both label and placeholder cases
-    expect(screen.getByText('Add Patient')).toBeInTheDocument();
-    expect(screen.getByLabelText('Name')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Name')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Contact')).toBeInTheDocument();
+  beforeEach(() => {
+    store.dispatch(login({ user: { username: 'admin', role: 'Admin' }, token: 'mock-admin-token' }));
   });
 
-  test('submits patient data', () => {
+  test('renders patient form', () => {
     render(
       <Provider store={store}>
         <BrowserRouter>
@@ -30,12 +19,28 @@ describe('PatientForm Component', () => {
         </BrowserRouter>
       </Provider>
     );
+    expect(screen.getByRole('heading', { name: /add patient/i })).toBeInTheDocument();
+    expect(screen.getByLabelText('Name')).toBeInTheDocument();
+    expect(screen.getByLabelText('Date of Birth')).toBeInTheDocument();
+    expect(screen.getByLabelText('Contact')).toBeInTheDocument();
+  });
 
+  test('submits patient data', async () => {
+    render(
+      <Provider store={store}>
+        <BrowserRouter>
+          <PatientForm />
+        </BrowserRouter>
+      </Provider>
+    );
     fireEvent.change(screen.getByLabelText('Name'), { target: { value: 'John Doe' } });
     fireEvent.change(screen.getByLabelText('Date of Birth'), { target: { value: '1990-01-01' } });
-    fireEvent.click(screen.getByText('Add Patient'));
-
-    // You can add specific assertions here if dispatch or redirect logic is testable
-    // Example (if using jest.mock): expect(mockDispatch).toHaveBeenCalledWith(...)
+    fireEvent.change(screen.getByLabelText('Contact'), { target: { value: '1234567890' } });
+    fireEvent.click(screen.getByRole('button', { name: /add patient/i }));
+    await waitFor(() => {
+      expect(store.getState().patients.patients).toContainEqual(
+        expect.objectContaining({ name: 'John Doe', dob: '1990-01-01', contact: '1234567890' })
+      );
+    }, { timeout: 2000 });
   });
 });

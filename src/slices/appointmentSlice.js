@@ -7,14 +7,14 @@ export const fetchAppointments = createAsyncThunk(
     try {
       const { auth } = getState();
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/appointments?page=${page}`,
+        `http://localhost:5000/api/appointments?page=${page}`,
         {
           headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || { message: 'Failed to fetch appointments' });
     }
   }
 );
@@ -25,7 +25,7 @@ export const scheduleAppointment = createAsyncThunk(
     try {
       const { auth } = getState();
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/appointments`,
+        `http://localhost:5000/api/appointments`,
         appointmentData,
         {
           headers: { Authorization: `Bearer ${auth.token}` },
@@ -33,7 +33,7 @@ export const scheduleAppointment = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || { message: 'Failed to schedule appointment' });
     }
   }
 );
@@ -61,7 +61,7 @@ const appointmentSlice = createSlice({
       })
       .addCase(fetchAppointments.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload.message;
+        state.error = action.payload?.message || 'Failed to fetch appointments';
       })
       .addCase(scheduleAppointment.pending, (state) => {
         state.status = 'loading';
@@ -72,7 +72,7 @@ const appointmentSlice = createSlice({
       })
       .addCase(scheduleAppointment.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload.message;
+        state.error = action.payload?.message || 'Failed to schedule appointment';
       });
   },
 });

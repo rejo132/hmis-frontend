@@ -2,12 +2,11 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import Login from './components/Login';
-import Register from './components/Register';
 import Dashboard from './components/Dashboard';
 import PatientForm from './components/PatientForm';
 import AppointmentForm from './components/AppointmentForm';
-import RecordForm from './components/RecordForm';
 import BillForm from './components/BillForm';
+import RecordForm from './components/RecordForm';
 
 const App = () => {
   const { user } = useSelector((state) => state.auth);
@@ -15,57 +14,30 @@ const App = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route
+          path="/"
+          element={user ? <Navigate to="/dashboard" /> : <Login />}
+        />
         <Route
           path="/dashboard"
-          element={user ? <Dashboard /> : <Navigate to="/login" />}
+          element={user ? <Dashboard /> : <Navigate to="/" />}
         />
         <Route
-          path="/patients/add"
-          element={
-            user && user.role === 'Admin' ? (
-              <PatientForm />
-            ) : (
-              <Navigate to="/dashboard" />
-            )
-          }
+          path="/patients/new"
+          element={user && user.role === 'Admin' ? <PatientForm /> : <Navigate to="/dashboard" />}
         />
         <Route
-          path="/patients/edit/:id"
-          element={
-            user && user.role === 'Admin' ? (
-              <PatientForm />
-            ) : (
-              <Navigate to="/dashboard" />
-            )
-          }
+          path="/appointments/new"
+          element={user ? <AppointmentForm /> : <Navigate to="/" />}
         />
         <Route
-          path="/appointments/add"
-          element={user ? <AppointmentForm /> : <Navigate to="/login" />}
+          path="/bills/new"
+          element={user && user.role === 'Admin' ? <BillForm /> : <Navigate to="/dashboard" />}
         />
         <Route
-          path="/records/add"
-          element={
-            user && user.role === 'Doctor' ? (
-              <RecordForm />
-            ) : (
-              <Navigate to="/dashboard" />
-            )
-          }
+          path="/records/new"
+          element={user && (user.role === 'Doctor' || user.role === 'Nurse') ? <RecordForm /> : <Navigate to="/dashboard" />}
         />
-        <Route
-          path="/bills/add"
-          element={
-            user && user.role === 'Admin' ? (
-              <BillForm />
-            ) : (
-              <Navigate to="/dashboard" />
-            )
-          }
-        />
-        <Route path="/" element={<Navigate to="/login" />} />
       </Routes>
     </Router>
   );

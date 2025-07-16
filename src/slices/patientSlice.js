@@ -7,14 +7,14 @@ export const fetchPatients = createAsyncThunk(
     try {
       const { auth } = getState();
       const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/patients?page=${page}`,
+        `http://localhost:5000/api/patients?page=${page}`,
         {
           headers: { Authorization: `Bearer ${auth.token}` },
         }
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || { message: 'Failed to fetch patients' });
     }
   }
 );
@@ -25,7 +25,7 @@ export const addPatient = createAsyncThunk(
     try {
       const { auth } = getState();
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/patients`,
+        `http://localhost:5000/api/patients`,
         patientData,
         {
           headers: { Authorization: `Bearer ${auth.token}` },
@@ -33,7 +33,7 @@ export const addPatient = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || { message: 'Failed to add patient' });
     }
   }
 );
@@ -44,7 +44,7 @@ export const updatePatient = createAsyncThunk(
     try {
       const { auth } = getState();
       const response = await axios.put(
-        `${process.env.REACT_APP_API_URL}/patients/${id}`,
+        `http://localhost:5000/api/patients/${id}`,
         patientData,
         {
           headers: { Authorization: `Bearer ${auth.token}` },
@@ -52,7 +52,7 @@ export const updatePatient = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || { message: 'Failed to update patient' });
     }
   }
 );
@@ -80,7 +80,7 @@ const patientSlice = createSlice({
       })
       .addCase(fetchPatients.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload.message;
+        state.error = action.payload?.message || 'Failed to fetch patients';
       })
       .addCase(addPatient.pending, (state) => {
         state.status = 'loading';
@@ -91,7 +91,7 @@ const patientSlice = createSlice({
       })
       .addCase(addPatient.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload.message;
+        state.error = action.payload?.message || 'Failed to add patient';
       })
       .addCase(updatePatient.pending, (state) => {
         state.status = 'loading';
@@ -105,7 +105,7 @@ const patientSlice = createSlice({
       })
       .addCase(updatePatient.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload.message;
+        state.error = action.payload?.message || 'Failed to update patient';
       });
   },
 });
