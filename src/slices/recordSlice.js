@@ -14,7 +14,7 @@ export const fetchRecords = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || { message: 'Failed to fetch records' });
     }
   }
 );
@@ -33,7 +33,7 @@ export const addRecord = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || { message: 'Failed to add record' });
     }
   }
 );
@@ -42,10 +42,10 @@ const recordSlice = createSlice({
   name: 'records',
   initialState: {
     records: [],
-    status: 'idle',
-    error: null,
     page: 1,
     pages: 1,
+    status: 'idle',
+    error: null,
   },
   reducers: {},
   extraReducers: (builder) => {
@@ -61,7 +61,7 @@ const recordSlice = createSlice({
       })
       .addCase(fetchRecords.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload.message;
+        state.error = action.payload?.message || 'Failed to fetch records';
       })
       .addCase(addRecord.pending, (state) => {
         state.status = 'loading';
@@ -72,7 +72,7 @@ const recordSlice = createSlice({
       })
       .addCase(addRecord.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload.message;
+        state.error = action.payload?.message || 'Failed to add record';
       });
   },
 });

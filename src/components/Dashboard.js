@@ -26,6 +26,26 @@ const Dashboard = () => {
     dispatch(logout());
   };
 
+  const renderPagination = (page, pages, fetchFunction) => (
+    <div className="mb-6">
+      <button
+        onClick={() => dispatch(fetchFunction(page - 1))}
+        disabled={page === 1}
+        className="mr-2 p-2 bg-gray-300 rounded disabled:opacity-50"
+      >
+        Previous
+      </button>
+      <span>Page {page} of {pages}</span>
+      <button
+        onClick={() => dispatch(fetchFunction(page + 1))}
+        disabled={page === pages}
+        className="ml-2 p-2 bg-gray-300 rounded disabled:opacity-50"
+      >
+        Next
+      </button>
+    </div>
+  );
+
   return (
     <div className="min-h-screen bg-gray-100 p-6">
       <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
@@ -79,23 +99,8 @@ const Dashboard = () => {
               ))}
             </tbody>
           </table>
-          <div className="mb-6">
-            <button
-              onClick={() => dispatch(fetchPatients(patientPage - 1))}
-              disabled={patientPage === 1}
-              className="mr-2 p-2 bg-gray-300 rounded disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span>Page {patientPage} of {patientPages}</span>
-            <button
-              onClick={() => dispatch(fetchPatients(patientPage + 1))}
-              disabled={patientPage === patientPages}
-              className="ml-2 p-2 bg-gray-300 rounded disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
+          {renderPagination(patientPage, patientPages, fetchPatients)}
+
           <h2 className="text-2xl font-bold mb-4">Appointments</h2>
           <table className="w-full mb-6 border-collapse" aria-label="Appointments">
             <thead>
@@ -115,23 +120,8 @@ const Dashboard = () => {
               ))}
             </tbody>
           </table>
-          <div className="mb-6">
-            <button
-              onClick={() => dispatch(fetchAppointments(appointmentPage - 1))}
-              disabled={appointmentPage === 1}
-              className="mr-2 p-2 bg-gray-300 rounded disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span>Page {appointmentPage} of {appointmentPages}</span>
-            <button
-              onClick={() => dispatch(fetchAppointments(appointmentPage + 1))}
-              disabled={appointmentPage === appointmentPages}
-              className="ml-2 p-2 bg-gray-300 rounded disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
+          {renderPagination(appointmentPage, appointmentPages, fetchAppointments)}
+
           <h2 className="text-2xl font-bold mb-4">Bills</h2>
           <table className="w-full border-collapse" aria-label="Bills">
             <thead>
@@ -153,25 +143,10 @@ const Dashboard = () => {
               ))}
             </tbody>
           </table>
-          <div className="mb-6">
-            <button
-              onClick={() => dispatch(fetchBills(billPage - 1))}
-              disabled={billPage === 1}
-              className="mr-2 p-2 bg-gray-300 rounded disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span>Page {billPage} of {billPages}</span>
-            <button
-              onClick={() => dispatch(fetchBills(billPage + 1))}
-              disabled={billPage === billPages}
-              className="ml-2 p-2 bg-gray-300 rounded disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
+          {renderPagination(billPage, billPages, fetchBills)}
         </>
       )}
+
       {(user.role === 'Doctor' || user.role === 'Nurse') && (
         <>
           <Link to="/appointments/add">
@@ -205,23 +180,8 @@ const Dashboard = () => {
               ))}
             </tbody>
           </table>
-          <div className="mb-6">
-            <button
-              onClick={() => dispatch(fetchPatients(patientPage - 1))}
-              disabled={patientPage === 1}
-              className="mr-2 p-2 bg-gray-300 rounded disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span>Page {patientPage} of {patientPages}</span>
-            <button
-              onClick={() => dispatch(fetchPatients(patientPage + 1))}
-              disabled={patientPage === patientPages}
-              className="ml-2 p-2 bg-gray-300 rounded disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
+          {renderPagination(patientPage, patientPages, fetchPatients)}
+
           <h2 className="text-2xl font-bold mb-4">Appointments</h2>
           <table className="w-full mb-6 border-collapse" aria-label="Appointments">
             <thead>
@@ -241,23 +201,8 @@ const Dashboard = () => {
               ))}
             </tbody>
           </table>
-          <div className="mb-6">
-            <button
-              onClick={() => dispatch(fetchAppointments(appointmentPage - 1))}
-              disabled={appointmentPage === 1}
-              className="mr-2 p-2 bg-gray-300 rounded disabled:opacity-50"
-            >
-              Previous
-            </button>
-            <span>Page {appointmentPage} of {appointmentPages}</span>
-            <button
-              onClick={() => dispatch(fetchAppointments(appointmentPage + 1))}
-              disabled={appointmentPage === appointmentPages}
-              className="ml-2 p-2 bg-gray-300 rounded disabled:opacity-50"
-            >
-              Next
-            </button>
-          </div>
+          {renderPagination(appointmentPage, appointmentPages, fetchAppointments)}
+
           <h2 className="text-2xl font-bold mb-4">Medical Records</h2>
           <table className="w-full border-collapse" aria-label="Medical Records">
             <thead>

@@ -1,26 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { fetchPatients } from '../slices/patientSlice';
 import { createBill } from '../slices/billSlice';
 
 const BillForm = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { patients } = useSelector((state) => state.patients);
+  const { user } = useSelector((state) => state.auth);
   const [formData, setFormData] = useState({
     patient_id: '',
     amount: '',
     description: '',
+    payment_status: 'Pending',
   });
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { patients } = useSelector((state) => state.patients);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    dispatch(createBill(formData));
-    navigate('/dashboard');
-  };
+  useEffect(() => {
+    if (user) {
+      dispatch(fetchPatients(1));
+    }
+  }, [dispatch, user]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await dispatch(createBill(formData)).unwrap();
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Failed to create bill:', err);
+    }
   };
 
   return (
@@ -29,8 +42,11 @@ const BillForm = () => {
         <h2 className="text-2xl font-bold mb-6 text-center">Generate Bill</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700">Patient</label>
+            <label className="block text-gray-700" htmlFor="patient_id">
+              Patient
+            </label>
             <select
+              id="patient_id"
               name="patient_id"
               value={formData.patient_id}
               onChange={handleChange}
@@ -46,10 +62,13 @@ const BillForm = () => {
             </select>
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Amount</label>
+            <label className="block text-gray-700" htmlFor="amount">
+              Amount
+            </label>
             <input
-              type="number"
+              id="amount"
               name="amount"
+              type="number"
               value={formData.amount}
               onChange={handleChange}
               className="w-full p-2 border rounded"
@@ -57,14 +76,17 @@ const BillForm = () => {
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Description</label>
+            <label className="block text-gray-700" htmlFor="description">
+              Description
+            </label>
             <textarea
+              id="description"
               name="description"
               value={formData.description}
               onChange={handleChange}
               className="w-full p-2 border rounded"
               required
-            ></textarea>
+            />
           </div>
           <button
             type="submit"

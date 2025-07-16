@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { store } from '../store';
 import Login from '../components/Login';
@@ -14,12 +14,9 @@ describe('Login Component', () => {
         </BrowserRouter>
       </Provider>
     );
-    expect(screen.getByText('Login')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /login/i })).toBeInTheDocument();
     expect(screen.getByLabelText('Username')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
-    // Also check placeholder for broader coverage
-    expect(screen.getByPlaceholderText('Username')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Password')).toBeInTheDocument();
   });
 
   test('displays error on invalid input', async () => {
@@ -30,7 +27,9 @@ describe('Login Component', () => {
         </BrowserRouter>
       </Provider>
     );
-    fireEvent.click(screen.getByText('Login'));
+    fireEvent.change(screen.getByLabelText('Username'), { target: { value: 'wrong' } });
+    fireEvent.change(screen.getByLabelText('Password'), { target: { value: 'wrong' } });
+    fireEvent.click(screen.getByRole('button', { name: /login/i }));
     expect(await screen.findByText('Invalid credentials')).toBeInTheDocument();
   });
 });

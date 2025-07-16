@@ -1,27 +1,39 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { fetchPatients } from '../slices/patientSlice';
 import { addRecord } from '../slices/recordSlice';
 
 const RecordForm = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { patients } = useSelector((state) => state.patients);
+  const { user } = useSelector((state) => state.auth);
   const [formData, setFormData] = useState({
     patient_id: '',
     diagnosis: '',
     prescription: '',
     vital_signs: '',
   });
-  const dispatch = useDispatch();
-  const navigate = useNavigate();
-  const { patients } = useSelector((state) => state.patients);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    dispatch(addRecord(formData));
-    navigate('/dashboard');
-  };
+  useEffect(() => {
+    if (user) {
+      dispatch(fetchPatients(1));
+    }
+  }, [dispatch, user]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await dispatch(addRecord(formData)).unwrap();
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Failed to add record:', err);
+    }
   };
 
   return (
@@ -30,8 +42,11 @@ const RecordForm = () => {
         <h2 className="text-2xl font-bold mb-6 text-center">Add Medical Record</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700">Patient</label>
+            <label className="block text-gray-700" htmlFor="patient_id">
+              Patient
+            </label>
             <select
+              id="patient_id"
               name="patient_id"
               value={formData.patient_id}
               onChange={handleChange}
@@ -47,32 +62,41 @@ const RecordForm = () => {
             </select>
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Diagnosis</label>
+            <label className="block text-gray-700" htmlFor="diagnosis">
+              Diagnosis
+            </label>
             <textarea
+              id="diagnosis"
               name="diagnosis"
               value={formData.diagnosis}
               onChange={handleChange}
               className="w-full p-2 border rounded"
               required
-            ></textarea>
+            />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Prescription</label>
+            <label className="block text-gray-700" htmlFor="prescription">
+              Prescription
+            </label>
             <textarea
+              id="prescription"
               name="prescription"
               value={formData.prescription}
               onChange={handleChange}
               className="w-full p-2 border rounded"
-            ></textarea>
+            />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Vital Signs</label>
+            <label className="block text-gray-700" htmlFor="vital_signs">
+              Vital Signs
+            </label>
             <textarea
+              id="vital_signs"
               name="vital_signs"
               value={formData.vital_signs}
               onChange={handleChange}
               className="w-full p-2 border rounded"
-            ></textarea>
+            />
           </div>
           <button
             type="submit"
