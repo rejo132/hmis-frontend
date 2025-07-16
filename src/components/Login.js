@@ -2,28 +2,25 @@ import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../slices/authSlice';
-import axios from 'axios';
 
 const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+  });
+  const [error, setError] = useState(null);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value.trim() });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/login`,
-        { username, password }
-      );
-      dispatch(
-        login({
-          token: response.data.access_token,
-          user: response.data.user,
-        })
-      );
+      console.log('Submitting login:', formData); // Debug log
+      await dispatch(login(formData)).unwrap();
       navigate('/dashboard');
     } catch (err) {
       setError('Invalid credentials');
@@ -37,21 +34,29 @@ const Login = () => {
         {error && <p className="text-red-500 mb-4">{error}</p>}
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700">Username</label>
+            <label className="block text-gray-700" htmlFor="username">
+              Username
+            </label>
             <input
+              id="username"
+              name="username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={formData.username}
+              onChange={handleChange}
               className="w-full p-2 border rounded"
               required
             />
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Password</label>
+            <label className="block text-gray-700" htmlFor="password">
+              Password
+            </label>
             <input
+              id="password"
+              name="password"
               type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              value={formData.password}
+              onChange={handleChange}
               className="w-full p-2 border rounded"
               required
             />
