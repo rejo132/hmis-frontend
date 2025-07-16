@@ -1,10 +1,12 @@
-// Correct JavaScript format (not JSON)
+// jest.config.js
 module.exports = {
+  testEnvironment: 'jsdom',
   transform: {
-    "^.+\\.(js|jsx)$": "babel-jest"
+    '^.+\\.(js|jsx)$': 'babel-jest'
   },
   transformIgnorePatterns: [
-    "/node_modules/(?!axios)/"
+    '/node_modules/(?!axios)/' // allow transforming axios ESM
   ],
-  testEnvironment: "jsdom"
+  moduleFileExtensions: ['js', 'jsx'],
+  setupFilesAfterEnv: ['@testing-library/jest-dom/extend-expect']
 };

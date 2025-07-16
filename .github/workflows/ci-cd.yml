@@ -1,9 +1,11 @@
 name: CI/CD Pipeline
+
 on:
   push:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -17,6 +19,7 @@ jobs:
         run: npm install
       - name: Run tests
         run: npm test
+
   deploy:
     needs: test
     runs-on: ubuntu-latest
@@ -27,4 +30,5 @@ jobs:
         env:
           HEROKU_API_KEY: ${{ secrets.HEROKU_API_KEY }}
         run: |
-          git push https://heroku:$HEROKU_API_KEY@git.heroku.com/<your-heroku-app>-frontend.git main
+          git remote add heroku https://heroku:$HEROKU_API_KEY@git.heroku.com/hmis-frontend.git
+          git push heroku main
