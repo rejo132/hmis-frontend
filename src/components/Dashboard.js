@@ -1,99 +1,163 @@
-import React, { useEffect, useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { fetchPatients } from '../slices/patientSlice';
 import { fetchAppointments } from '../slices/appointmentSlice';
+import { fetchBills } from '../slices/billSlice';
 
-const Dashboard = ({ role }) => {
+const Dashboard = () => {
+  const { user } = useSelector((state) => state.auth);
+  const { patients, page, pages } = useSelector((state) => state.patients);
+  const { appointments } = useSelector((state) => state.appointments);
+  const { bills } = useSelector((state) => state.bills);
   const dispatch = useDispatch();
-  const { patients, total, pages, error: patientError } = useSelector((state) => state.patients);
-  const { appointments, error: appointmentError } = useSelector((state) => state.appointments);
-  const [page, setPage] = useState(1);
-  const [search, setSearch] = useState('');
+  const navigate = useNavigate();
 
   useEffect(() => {
-    dispatch(fetchPatients({ page }));
-    dispatch(fetchAppointments({ page }));
-  }, [page, dispatch]);
+    dispatch(fetchPatients(page));
+    dispatch(fetchAppointments(page));
+    if (user.role === 'Admin') {
+      dispatch(fetchBills(page));
+    }
+  }, [dispatch, page, user.role]);
 
-  const handleSearch = () => {
-    // Implement search logic if needed (e.g., filter patients by name)
-    dispatch(fetchPatients({ page: 1 }));
+  const handlePageChange = (newPage) => {
+    dispatch(fetchPatients(newPage));
+    dispatch(fetchAppointments(newPage));
+    if (user.role === 'Admin') {
+      dispatch(fetchBills(newPage));
+    }
   };
 
   return (
-    <div className="container mx-auto p-4">
-      <h2 className="text-2xl mb-4">Dashboard ({role})</h2>
-      {(patientError || appointmentError) && (
-        <p className="text-red-500">{patientError || appointmentError}</p>
-      )}
-      {role === 'Admin' && (
-        <div className="mb-8">
-          <Link to="/patient/new" className="bg-blue-600 text-white p-2 rounded mr-2">
-            Add Patient
-          </Link>
-          <Link to="/appointment/new" className="bg-blue-600 text-white p-2 rounded mr-2">
-            Schedule Appointment
-          </Link>
-          <Link to="/bill/new" className="bg-blue-600 text-white p-2 rounded">
-            Create Bill
-          </Link>
-        </div>
-      )}
-      {role === 'Doctor' && (
-        <div className="mb-8">
-          <Link to="/record/new" className="bg-blue-600 text-white p-2 rounded">
-            Add Medical Record
-          </Link>
-        </div>
-      )}
-      <div className="mb-8">
-        <h3 className="text-xl mb-2">Patients</h3>
-        <input
-          type="text"
-          placeholder="Search by name"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full p-2 mb-4 border rounded"
-        />
-        <button onClick={handleSearch} className="bg-blue-600 text-white p-2 rounded">
-          Search
+    <div className="min-h-screen bg-gray-100 p-6">
+      <h1 className="text-3xl font-bold mb-6">Dashboard</h1>
+      {user.role === 'Admin' && (
+        <button
+          onClick={() => navigate('/patients/add')}
+          className="mb-4 bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+        >
+          Add Patient
         </button>
-        <ul>
+      )}
+      <button
+        onClick={() => navigate('/appointments/add')}
+        className="mb-4 ml-2 bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+      >
+        Schedule Appointment
+      </button>
+      {user.role === 'Doctor' && (
+        <button
+          onClick={() => navigate('/records/add')}
+          className="mb-4 ml-2 bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+        >
+          Add Medical Record
+        </button>
+      )}
+      {user.role === 'Admin' && (
+        <button
+          onClick={() => navigate('/bills/add')}
+          className="mb-4 ml-2 bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+        >
+          Generate Bill
+        </button>
+      )}
+
+      <h2 className="text-2xl font-bold mb-4">Patients</h2>
+      <table className="w-full mb-6 border-collapse">
+        <thead>
+          <tr className="bg-gray-200">
+            <th className="p-2 border">Name</th>
+            <th className="p-2 border">DOB</th>
+            <th className="p-2 border">Contact</th>
+            {user.role === 'Admin' && <th className="p-2 border">Actions</th>}
+          </tr>
+        </thead>
+        <tbody>
           {patients.map((patient) => (
-            <li key={patient.id} className="p-2 border-b">
-              {patient.name} - {patient.dob} - {patient.contact}
-            </li>
+            <tr key={patient.id}>
+              <td className="p-2 border">{patient.name}</td>
+              <td className="p-2 border">{patient.dob}</td>
+              <td className="p-2 border">{patient.contact}</td>
+              {user.role === 'Admin' && (
+                <td className="p-2 border">
+                  <button
+                    onClick={() => navigate(`/patients/edit/${patient.id}`)}
+                    className="bg-yellow-500 text-white p-1 rounded hover:bg-yellow-600"
+                  >
+                    Edit
+                  </button>
+                </td>
+              )}
+            </tr>
           ))}
-        </ul>
-        <div className="mt-4">
-          <button
-            onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
-            disabled={page === 1}
-            className="bg-blue-600 text-white p-2 rounded mr-2"
-          >
-            Previous
-          </button>
-          <span>Page {page} of {pages}</span>
-          <button
-            onClick={() => setPage((prev) => Math.min(prev + 1, pages))}
-            disabled={page === pages}
-            className="bg-blue-600 text-white p-2 rounded ml-2"
-          >
-            Next
-          </button>
-        </div>
+        </tbody>
+      </table>
+      <div className="mb-6">
+        <button
+          onClick={() => handlePageChange(page - 1)}
+          disabled={page === 1}
+          className="mr-2 p-2 bg-gray-300 rounded disabled:opacity-50"
+        >
+          Previous
+        </button>
+        <span>
+          Page {page} of {pages}
+        </span>
+        <button
+          onClick={() => handlePageChange(page + 1)}
+          disabled={page === pages}
+          className="ml-2 p-2 bg-gray-300 rounded disabled:opacity-50"
+        >
+          Next
+        </button>
       </div>
-      <div>
-        <h3 className="text-xl mb-2">Appointments</h3>
-        <ul>
+
+      <h2 className="text-2xl font-bold mb-4">Appointments</h2>
+      <table className="w-full mb-6 border-collapse">
+        <thead>
+          <tr className="bg-gray-200">
+            <th className="p-2 border">Patient</th>
+            <th className="p-2 border">Time</th>
+            <th className="p-2 border">Status</th>
+          </tr>
+        </thead>
+        <tbody>
           {appointments.map((appointment) => (
-            <li key={appointment.id} className="p-2 border-b">
-              Patient ID: {appointment.patient_id}, Doctor ID: {appointment.doctor_id}, Time: {appointment.time}
-            </li>
+            <tr key={appointment.id}>
+              <td className="p-2 border">{appointment.patient_name}</td>
+              <td className="p-2 border">{appointment.appointment_time}</td>
+              <td className="p-2 border">{appointment.status}</td>
+            </tr>
           ))}
-        </ul>
-      </div>
+        </tbody>
+      </table>
+
+      {user.role === 'Admin' && (
+        <>
+          <h2 className="text-2xl font-bold mb-4">Bills</h2>
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-gray-200">
+                <th className="p-2 border">Patient</th>
+                <th className="p-2 border">Amount</th>
+                <th className="p-2 border">Description</th>
+                <th className="p-2 border">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bills.map((bill) => (
+                <tr key={bill.id}>
+                  <td className="p-2 border">{bill.patient_name}</td>
+                  <td className="p-2 border">{bill.amount}</td>
+                  <td className="p-2 border">{bill.description}</td>
+                  <td className="p-2 border">{bill.payment_status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      )}
     </div>
   );
 };
