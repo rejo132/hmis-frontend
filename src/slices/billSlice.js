@@ -1,13 +1,31 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
+export const fetchBills = createAsyncThunk(
+  'bills/fetchBills',
+  async (page = 1, { getState, rejectWithValue }) => {
+    try {
+      const { auth } = getState();
+      const response = await axios.get(
+        `http://localhost:5000/api/bills?page=${page}`,
+        {
+          headers: { Authorization: `Bearer ${auth.token}` },
+        }
+      );
+      return response.data;
+    } catch (error) {
+      return rejectWithValue(error.response?.data || { message: 'Failed to fetch bills' });
+    }
+  }
+);
+
 export const createBill = createAsyncThunk(
   'bills/createBill',
   async (billData, { getState, rejectWithValue }) => {
     try {
       const { auth } = getState();
       const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/bills`,
+        `http://localhost:5000/api/bills`,
         billData,
         {
           headers: { Authorization: `Bearer ${auth.token}` },
@@ -15,7 +33,7 @@ export const createBill = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || { message: 'Failed to create bill' });
     }
   }
 );
@@ -26,7 +44,7 @@ export const updateBill = createAsyncThunk(
     try {
       const { auth } = getState();
       const response = await axios.put(
-        `${process.env.REACT_APP_API_URL}/bills/${id}`,
+        `http://localhost:5000/api/bills/${id}`,
         { payment_status },
         {
           headers: { Authorization: `Bearer ${auth.token}` },
@@ -34,25 +52,7 @@ export const updateBill = createAsyncThunk(
       );
       return response.data;
     } catch (error) {
-      return rejectWithValue(error.response.data);
-    }
-  }
-);
-
-export const fetchBills = createAsyncThunk(
-  'bills/fetchBills',
-  async (page = 1, { getState, rejectWithValue }) => {
-    try {
-      const { auth } = getState();
-      const response = await axios.get(
-        `${process.env.REACT_APP_API_URL}/bills?page=${page}`,
-        {
-          headers: { Authorization: `Bearer ${auth.token}` },
-        }
-      );
-      return response.data;
-    } catch (error) {
-      return rejectWithValue(error.response.data);
+      return rejectWithValue(error.response?.data || { message: 'Failed to update bill' });
     }
   }
 );
@@ -69,6 +69,19 @@ const billSlice = createSlice({
   reducers: {},
   extraReducers: (builder) => {
     builder
+      .addCase(fetchBills.pending, (state) => {
+        state.status = 'loading';
+      })
+      .addCase(fetchBills.fulfilled, (state, action) => {
+        state.status = 'succeeded';
+        state.bills = action.payload.bills;
+        state.page = action.payload.page;
+        state.pages = action.payload.pages;
+      })
+      .addCase(fetchBills.rejected, (state, action) => {
+        state.status = 'failed';
+        state.error = action.payload?.message || 'Failed to fetch bills';
+      })
       .addCase(createBill.pending, (state) => {
         state.status = 'loading';
       })
@@ -78,7 +91,7 @@ const billSlice = createSlice({
       })
       .addCase(createBill.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload.message;
+        state.error = action.payload?.message || 'Failed to create bill';
       })
       .addCase(updateBill.pending, (state) => {
         state.status = 'loading';
@@ -92,20 +105,7 @@ const billSlice = createSlice({
       })
       .addCase(updateBill.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload.message;
-      })
-      .addCase(fetchBills.pending, (state) => {
-        state.status = 'loading';
-      })
-      .addCase(fetchBills.fulfilled, (state, action) => {
-        state.status = 'succeeded';
-        state.bills = action.payload.bills;
-        state.page = action.payload.page;
-        state.pages = action.payload.pages;
-      })
-      .addCase(fetchBills.rejected, (state, action) => {
-        state.status = 'failed';
-        state.error = action.payload.message;
+        state.error = action.payload?.message || 'Failed to update bill';
       });
   },
 });

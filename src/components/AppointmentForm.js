@@ -1,25 +1,38 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { fetchPatients } from '../slices/patientSlice';
 import { scheduleAppointment } from '../slices/appointmentSlice';
 
 const AppointmentForm = () => {
-  const [formData, setFormData] = useState({
-    patient_id: '',
-    appointment_time: '',
-  });
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { patients } = useSelector((state) => state.patients);
+  const { user } = useSelector((state) => state.auth);
+  const [formData, setFormData] = useState({
+    patient_id: '',
+    appointment_time: '',
+    status: 'Scheduled',
+  });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    dispatch(scheduleAppointment(formData));
-    navigate('/dashboard');
-  };
+  useEffect(() => {
+    if (user) {
+      dispatch(fetchPatients(1));
+    }
+  }, [dispatch, user]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      await dispatch(scheduleAppointment(formData)).unwrap();
+      navigate('/dashboard');
+    } catch (err) {
+      console.error('Failed to schedule appointment:', err);
+    }
   };
 
   return (
@@ -28,8 +41,11 @@ const AppointmentForm = () => {
         <h2 className="text-2xl font-bold mb-6 text-center">Schedule Appointment</h2>
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700">Patient</label>
+            <label className="block text-gray-700" htmlFor="patient_id">
+              Patient
+            </label>
             <select
+              id="patient_id"
               name="patient_id"
               value={formData.patient_id}
               onChange={handleChange}
@@ -45,10 +61,13 @@ const AppointmentForm = () => {
             </select>
           </div>
           <div className="mb-4">
-            <label className="block text-gray-700">Appointment Time</label>
+            <label className="block text-gray-700" htmlFor="appointment_time">
+              Appointment Time
+            </label>
             <input
-              type="datetime-local"
+              id="appointment_time"
               name="appointment_time"
+              type="datetime-local"
               value={formData.appointment_time}
               onChange={handleChange}
               className="w-full p-2 border rounded"
@@ -59,7 +78,7 @@ const AppointmentForm = () => {
             type="submit"
             className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
           >
-            Schedule
+            Schedule Appointment
           </button>
         </form>
       </div>
