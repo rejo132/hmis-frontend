@@ -17,6 +17,9 @@ describe('Login Component', () => {
     expect(screen.getByText('Login')).toBeInTheDocument();
     expect(screen.getByLabelText('Username')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
+    // Also check placeholder for broader coverage
+    expect(screen.getByPlaceholderText('Username')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Password')).toBeInTheDocument();
   });
 
   test('displays error on invalid input', async () => {
