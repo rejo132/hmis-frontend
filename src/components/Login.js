@@ -13,12 +13,15 @@ const Login = () => {
   const [error, setError] = useState(null);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    // Trim whitespace to avoid accidental input errors
+    setFormData({ ...formData, [e.target.name]: e.target.value.trim() });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      // Optional: useful for debugging
+      console.log('Submitting login:', formData);
       await dispatch(login(formData)).unwrap();
       navigate('/dashboard');
     } catch (err) {

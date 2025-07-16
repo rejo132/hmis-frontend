@@ -7,7 +7,7 @@ export const fetchRecords = createAsyncThunk(
     try {
       const { auth } = getState();
       const response = await axios.get(
-        `http://localhost:5000/api/records?page=${page}`,
+        `${process.env.REACT_APP_API_URL}/records?page=${page}`,
         {
           headers: { Authorization: `Bearer ${auth.token}` },
         }
@@ -25,7 +25,7 @@ export const addRecord = createAsyncThunk(
     try {
       const { auth } = getState();
       const response = await axios.post(
-        `http://localhost:5000/api/records`,
+        `${process.env.REACT_APP_API_URL}/records`,
         recordData,
         {
           headers: { Authorization: `Bearer ${auth.token}` },
