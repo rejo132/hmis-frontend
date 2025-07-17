@@ -1,7 +1,8 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
-import store from './store'; // ✅ fixed import
+import { Toaster } from 'react-hot-toast';
+import store from './store';
 import App from './App';
 import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
@@ -10,7 +11,7 @@ import './index.css';
 if (process.env.NODE_ENV === 'development') {
   import('./mocks/browser').then(({ worker }) => {
     worker.start({
-      onUnhandledRequest: 'bypass', // Bypass unhandled requests (e.g., static assets)
+      onUnhandledRequest: 'bypass',
     });
   });
 }
@@ -19,6 +20,7 @@ const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <Provider store={store}>
+      <Toaster position="top-right" />
       <ErrorBoundary>
         <App />
       </ErrorBoundary>

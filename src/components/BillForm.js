@@ -1,72 +1,79 @@
-import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchPatients } from '../slices/patientSlice';
-import { createBill } from '../slices/billSlice';
+import toast from 'react-hot-toast';
 
 const BillForm = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { patients } = useSelector((state) => state.patients);
-  const { user } = useSelector((state) => state.auth);
-  const { status, error } = useSelector((state) => state.bills);
   const [formData, setFormData] = useState({
     patient_id: '',
     amount: '',
     description: '',
+    payment_status: 'Pending',
+    discount: 0,
+    payment_method: 'Cash',
+    insurance_provider: '',
+    insurance_policy_number: '',
   });
 
-  useEffect(() => {
-    if (user) {
-      dispatch(fetchPatients(1));
-    }
-  }, [dispatch, user]);
-
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    console.log(`Changing ${name} to ${value}`); // Debug log
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      console.log('Submitting bill:', formData); // Debug log
-      await dispatch(createBill({ ...formData, payment_status: 'Pending' })).unwrap();
+      const finalAmount = formData.amount - (formData.discount || 0);
+      const billData = { ...formData, amount: finalAmount };
+      await fetch('http://localhost:5000/bills', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('token')}`,
+        },
+        body: JSON.stringify(billData),
+      }).then((res) => res.json());
+      toast.success('Bill Created');
       navigate('/dashboard');
     } catch (err) {
       console.error('Failed to create bill:', err);
+      toast.error('Failed to create bill');
+    }
+  };
+
+  const handlePrintReceipt = () => {
+    toast.success('Receipt Printed');
+  };
+
+  const handleProcessRefund = () => {
+    if (formData.payment_status === 'Paid') {
+      toast.success('Refund Processed');
+    } else {
+      toast.error('Cannot process refund for unpaid bill');
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Generate Bill</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700" htmlFor="patient_id">
-              Patient
+      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+        <h2 className="text-2xl font-bold mb-6 text-center">Create Bill</h2>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="patient_id">
+              Patient ID
             </label>
-            <select
+            <input
               id="patient_id"
               name="patient_id"
+              type="number"
               value={formData.patient_id}
               onChange={handleChange}
               className="w-full p-2 border rounded"
               required
-            >
-              <option value="">Select Patient</option>
-              {patients.map((patient) => (
-                <option key={patient.id} value={patient.id}>
-                  {patient.name}
-                </option>
-              ))}
-            </select>
+            />
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700" htmlFor="amount">
-              Amount
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="amount">
+              Amount (KES)
             </label>
             <input
               id="amount"
@@ -78,8 +85,21 @@ const BillForm = () => {
               required
             />
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700" htmlFor="description">
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="discount">
+              Discount (KES)
+            </label>
+            <input
+              id="discount"
+              name="discount"
+              type="number"
+              value={formData.discount}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="description">
               Description
             </label>
             <textarea
@@ -91,14 +111,94 @@ const BillForm = () => {
               required
             />
           </div>
-          {error && <p className="text-red-500 mb-4">{error}</p>}
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-            disabled={status === 'loading'}
-          >
-            Generate Bill
-          </button>
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="payment_status">
+              Payment Status
+            </label>
+            <select
+              id="payment_status"
+              name="payment_status"
+              value={formData.payment_status}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            >
+              <option value="Pending">Pending</option>
+              <option value="Paid">Paid</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="payment_method">
+              Payment Method
+            </label>
+            <select
+              id="payment_method"
+              name="payment_method"
+              value={formData.payment_method}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            >
+              <option value="Cash">Cash</option>
+              <option value="M-Pesa">M-Pesa</option>
+              <option value="Card">Card</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="insurance_provider">
+              Insurance Provider (Optional)
+            </label>
+            <input
+              id="insurance_provider"
+              name="insurance_provider"
+              type="text"
+              value={formData.insurance_provider}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="insurance_policy_number">
+              Insurance Policy Number (Optional)
+            </label>
+            <input
+              id="insurance_policy_number"
+              name="insurance_policy_number"
+              type="text"
+              value={formData.insurance_policy_number}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div className="flex space-x-4">
+            <button
+              type="submit"
+              className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/dashboard')}
+              className="w-full bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+          </div>
+          <div className="flex space-x-4 mt-4">
+            <button
+              type="button"
+              onClick={handlePrintReceipt}
+              className="w-full bg-green-500 text-white p-2 rounded hover:bg-green-600"
+            >
+              Print Receipt
+            </button>
+            <button
+              type="button"
+              onClick={handleProcessRefund}
+              className="w-full bg-red-500 text-white p-2 rounded hover:bg-red-600"
+            >
+              Process Refund
+            </button>
+          </div>
         </form>
       </div>
     </div>
