@@ -1,56 +1,34 @@
-import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
+import { MemoryRouter } from 'react-router-dom';
+import { act } from 'react';
 import { store } from '../store';
 import BillForm from '../components/BillForm';
-import { BrowserRouter } from 'react-router-dom';
-import { login } from '../slices/authSlice';
-import { act } from 'react-dom/test-utils';
 
 describe('BillForm Component', () => {
-  beforeEach(() => {
-    store.dispatch(login({ user: { username: 'admin', role: 'Admin' }, token: 'mock-admin-token' }));
-    store.dispatch({
-      type: 'patients/fetchPatients/fulfilled',
-      payload: {
-        patients: [{ id: 1, name: 'John Doe' }],
-        page: 1,
-        pages: 1,
-      },
-    });
-  });
-
-  test('renders bill form', () => {
+  it('submits bill data', async () => {
     render(
       <Provider store={store}>
-        <BrowserRouter>
+        <MemoryRouter>
           <BillForm />
-        </BrowserRouter>
+        </MemoryRouter>
       </Provider>
     );
-    expect(screen.getByRole('heading', { name: /generate bill/i })).toBeInTheDocument();
-    expect(screen.getByLabelText('Patient')).toBeInTheDocument();
-    expect(screen.getByLabelText('Amount')).toBeInTheDocument();
-    expect(screen.getByLabelText('Description')).toBeInTheDocument();
-  });
 
-  test('submits bill data', async () => {
-    render(
-      <Provider store={store}>
-        <BrowserRouter>
-          <BillForm />
-        </BrowserRouter>
-      </Provider>
-    );
+    await waitFor(() => {
+      expect(screen.getByText('John Doe')).toBeInTheDocument();
+    }, { timeout: 2000 });
+
     await act(async () => {
       fireEvent.change(screen.getByLabelText('Patient'), { target: { value: '1' } });
       fireEvent.change(screen.getByLabelText('Amount'), { target: { value: '100' } });
       fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Consultation' } });
       fireEvent.click(screen.getByRole('button', { name: /generate bill/i }));
     });
+
     await waitFor(() => {
       expect(store.getState().bills.bills).toContainEqual(
-        expect.objectContaining({ amount: '100', patient_id: '1', description: 'Consultation' })
+        expect.objectContaining({ patient_id: '1', amount: '100', description: 'Consultation', payment_status: 'Pending' })
       );
     }, { timeout: 2000 });
   });

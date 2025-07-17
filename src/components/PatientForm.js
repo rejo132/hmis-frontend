@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { addPatient } from '../slices/patientSlice';
@@ -6,8 +6,7 @@ import { addPatient } from '../slices/patientSlice';
 const PatientForm = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
-
+  const { status, error } = useSelector((state) => state.patients);
   const [formData, setFormData] = useState({
     name: '',
     dob: '',
@@ -115,9 +114,11 @@ const PatientForm = () => {
               className="w-full p-2 border rounded"
             />
           </div>
+          {error && <p className="text-red-500 mb-4">{error}</p>}
           <button
             type="submit"
             className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+            disabled={status === 'loading'}
           >
             Add Patient
           </button>
