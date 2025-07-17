@@ -9,11 +9,11 @@ const BillForm = () => {
   const navigate = useNavigate();
   const { patients } = useSelector((state) => state.patients);
   const { user } = useSelector((state) => state.auth);
+  const { status, error } = useSelector((state) => state.bills);
   const [formData, setFormData] = useState({
     patient_id: '',
     amount: '',
     description: '',
-    payment_status: 'Pending',
   });
 
   useEffect(() => {
@@ -23,13 +23,16 @@ const BillForm = () => {
   }, [dispatch, user]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    console.log(`Changing ${name} to ${value}`); // Debug log
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await dispatch(createBill(formData)).unwrap();
+      console.log('Submitting bill:', formData); // Debug log
+      await dispatch(createBill({ ...formData, payment_status: 'Pending' })).unwrap();
       navigate('/dashboard');
     } catch (err) {
       console.error('Failed to create bill:', err);
@@ -88,9 +91,11 @@ const BillForm = () => {
               required
             />
           </div>
+          {error && <p className="text-red-500 mb-4">{error}</p>}
           <button
             type="submit"
             className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+            disabled={status === 'loading'}
           >
             Generate Bill
           </button>

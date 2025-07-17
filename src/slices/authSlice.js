@@ -1,31 +1,36 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
 
-const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
-});
-
-export const login = createAsyncThunk('auth/login', async (credentials, { rejectWithValue }) => {
-  try {
-    const response = await api.post('/login', credentials);
-    return response.data;
-  } catch (error) {
-    return rejectWithValue(error.response.data);
+export const login = createAsyncThunk(
+  'auth/login',
+  async ({ username, password }, { rejectWithValue }) => {
+    try {
+      console.log('Sending login request:', { username, password });
+      const response = await axios.post('http://localhost:5000/login', {
+        username,
+        password,
+      });
+      console.log('Login response:', response.data);
+      return response.data;
+    } catch (err) {
+      console.error('Login request failed:', err.message);
+      return rejectWithValue(err.response?.data || { message: err.message });
+    }
   }
-});
+);
 
 const authSlice = createSlice({
   name: 'auth',
   initialState: {
     user: null,
-    token: null,
+    access_token: null,
     status: 'idle',
     error: null,
   },
   reducers: {
     logout: (state) => {
       state.user = null;
-      state.token = null;
+      state.access_token = null;
       state.status = 'idle';
       state.error = null;
     },
@@ -34,11 +39,12 @@ const authSlice = createSlice({
     builder
       .addCase(login.pending, (state) => {
         state.status = 'loading';
+        state.error = null;
       })
       .addCase(login.fulfilled, (state, action) => {
         state.status = 'succeeded';
         state.user = action.payload.user;
-        state.token = action.payload.access_token;
+        state.access_token = action.payload.access_token;
         state.error = null;
       })
       .addCase(login.rejected, (state, action) => {

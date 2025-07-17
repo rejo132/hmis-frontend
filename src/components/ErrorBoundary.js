@@ -1,22 +1,22 @@
 import React from 'react';
 
 class ErrorBoundary extends React.Component {
-  state = { hasError: false, error: null };
+  state = { error: null };
 
   static getDerivedStateFromError(error) {
-    return { hasError: true, error };
+    return { error };
   }
 
   render() {
-    if (this.state.hasError) {
+    if (this.state.error) {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-100">
           <div className="bg-white p-8 rounded shadow-md">
-            <h1 className="text-2xl font-bold text-red-600">Something went wrong</h1>
-            <p className="text-gray-700">{this.state.error?.message}</p>
+            <h2 className="text-2xl font-bold text-red-600 mb-4">Something went wrong</h2>
+            <p className="text-red-500">{this.state.error.message}</p>
             <button
-              className="mt-4 bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
               onClick={() => window.location.reload()}
+              className="mt-4 bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
             >
               Reload
             </button>

@@ -9,10 +9,10 @@ const AppointmentForm = () => {
   const navigate = useNavigate();
   const { patients } = useSelector((state) => state.patients);
   const { user } = useSelector((state) => state.auth);
+  const { status, error } = useSelector((state) => state.appointments);
   const [formData, setFormData] = useState({
     patient_id: '',
     appointment_time: '',
-    status: 'Scheduled',
   });
 
   useEffect(() => {
@@ -22,13 +22,16 @@ const AppointmentForm = () => {
   }, [dispatch, user]);
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    console.log(`Changing ${name} to ${value}`); // Debug log
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await dispatch(scheduleAppointment(formData)).unwrap();
+      console.log('Submitting appointment:', formData); // Debug log
+      await dispatch(scheduleAppointment({ ...formData, status: 'Scheduled' })).unwrap();
       navigate('/dashboard');
     } catch (err) {
       console.error('Failed to schedule appointment:', err);
@@ -74,9 +77,11 @@ const AppointmentForm = () => {
               required
             />
           </div>
+          {error && <p className="text-red-500 mb-4">{error}</p>}
           <button
             type="submit"
             className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+            disabled={status === 'loading'}
           >
             Schedule Appointment
           </button>

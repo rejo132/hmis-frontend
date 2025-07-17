@@ -1,17 +1,26 @@
-import { server } from './mocks/server';
 import '@testing-library/jest-dom';
+import { server } from './mocks/server';
+import { store } from './store';
+import { login } from './slices/authSlice';
 
-// Start the mock server before all tests
 beforeAll(() => {
-  server.listen({ onUnhandledRequest: 'error' });
+  server.listen();
+  store.dispatch(
+    login.fulfilled(
+      {
+        user: { id: '1', username: 'admin', role: 'Admin' },
+        access_token: 'mock-token',
+      },
+      'mock-request-id',
+      { username: 'admin', password: 'admin123' }
+    )
+  );
 });
 
-// Reset handlers after each test to ensure clean state
 afterEach(() => {
   server.resetHandlers();
 });
 
-// Close the server after all tests
 afterAll(() => {
   server.close();
 });
