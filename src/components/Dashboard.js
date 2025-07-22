@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { NavLink } from 'react-router-dom';
+import PatientTimeline from './PatientTimeline';
 import { fetchPatients } from '../slices/patientSlice';
 import { fetchAppointments } from '../slices/appointmentSlice';
 import { fetchRecords } from '../slices/recordSlice';
@@ -499,6 +500,47 @@ const Dashboard = () => {
                 </table>
               )}
               {renderPagination(currentBillPage, billPages, setCurrentBillPage)}
+            </div>
+          )}
+
+          {/* Patient Timeline Demo Section */}
+          {(user.role === 'Admin' || user.role === 'Doctor' || user.role === 'Nurse') && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <PatientTimeline patientId="demo" />
+              
+              {/* Recent Activity Summary */}
+              <div className="glass-card">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">Recent Activity</h3>
+                  <div className="w-8 h-1 bg-gradient-to-r from-primary-500 to-secondary-500 rounded-full"></div>
+                </div>
+                
+                <div className="space-y-4">
+                  {[
+                    { action: 'New patient registered', time: '5 minutes ago', type: 'patient' },
+                    { action: 'Lab results completed', time: '12 minutes ago', type: 'lab' },
+                    { action: 'Appointment scheduled', time: '1 hour ago', type: 'appointment' },
+                    { action: 'Medication administered', time: '2 hours ago', type: 'medication' }
+                  ].map((activity, index) => (
+                    <div key={index} className="flex items-center space-x-3 p-3 rounded-lg hover:bg-white/50 dark:hover:bg-gray-800/50 transition-all duration-200">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                        activity.type === 'patient' ? 'bg-primary-100 text-primary-600 dark:bg-primary-900/30 dark:text-primary-400' :
+                        activity.type === 'lab' ? 'bg-secondary-100 text-secondary-600 dark:bg-secondary-900/30 dark:text-secondary-400' :
+                        activity.type === 'appointment' ? 'bg-success-100 text-success-600 dark:bg-success-900/30 dark:text-success-400' :
+                        'bg-warning-100 text-warning-600 dark:bg-warning-900/30 dark:text-warning-400'
+                      }`}>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-medium text-gray-900 dark:text-white">{activity.action}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{activity.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           )}
         </div>

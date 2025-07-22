@@ -3,6 +3,8 @@ import { BrowserRouter as Router, Routes, Route, Navigate, NavLink } from 'react
 import { useSelector, useDispatch } from 'react-redux';
 import { logout, loadTokenFromStorage } from './slices/authSlice';
 import DarkModeToggle from './components/DarkModeToggle';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
+import GlobalSearch from './components/GlobalSearch';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -131,6 +133,9 @@ const App = () => {
                   </div>
                 </div>
                 <div className="flex items-center space-x-6">
+                  <div className="hidden md:block w-80">
+                    <GlobalSearch />
+                  </div>
                   <DarkModeToggle />
                   <div className="flex items-center space-x-3">
                     <div className="text-right">
@@ -679,6 +684,9 @@ const App = () => {
             </nav>
           </div>
         </div>
+        
+        {/* PWA Components */}
+        <PWAInstallPrompt />
       </Router>
     </ErrorBoundary>
   );
