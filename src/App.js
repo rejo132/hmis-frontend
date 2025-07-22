@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, NavLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout, loadTokenFromStorage } from './slices/authSlice';
+import DarkModeToggle from './components/DarkModeToggle';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -36,6 +37,7 @@ import FinanceManagement from './components/FinanceManagement';
 const App = () => {
   const dispatch = useDispatch();
   const { user, status } = useSelector((state) => state.auth || {});
+  const { isDarkMode } = useSelector((state) => state.theme || { isDarkMode: false });
   console.log('App.js: user=', user, 'authStatus=', status);
 
   // Load token from localStorage on app startup
@@ -43,16 +45,25 @@ const App = () => {
     dispatch(loadTokenFromStorage());
   }, [dispatch]);
 
-  const roleColor = user?.role === 'Doctor' ? 'bg-blue-600' : 
-                   user?.role === 'Nurse' ? 'bg-green-600' : 
-                   user?.role === 'Admin' ? 'bg-gray-600' : 
-                   user?.role === 'Lab' ? 'bg-red-600' : 
-                   user?.role === 'Patient' ? 'bg-indigo-600' : 
-                   user?.role === 'Pharmacist' ? 'bg-purple-600' :
-                   user?.role === 'Receptionist' ? 'bg-teal-600' :
-                   user?.role === 'Billing' ? 'bg-yellow-600' :
-                   user?.role === 'IT' ? 'bg-orange-600' :
-                   user?.role === 'Accountant' ? 'bg-pink-600' : 'bg-gray-200';
+  // Apply dark mode class to document
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
+
+  const roleColor = user?.role === 'Doctor' ? 'bg-gradient-to-r from-blue-600 to-blue-700' : 
+                   user?.role === 'Nurse' ? 'bg-gradient-to-r from-green-600 to-green-700' : 
+                   user?.role === 'Admin' ? 'bg-gradient-to-r from-gray-600 to-gray-700' : 
+                   user?.role === 'Lab' ? 'bg-gradient-to-r from-red-600 to-red-700' : 
+                   user?.role === 'Patient' ? 'bg-gradient-to-r from-indigo-600 to-indigo-700' : 
+                   user?.role === 'Pharmacist' ? 'bg-gradient-to-r from-purple-600 to-purple-700' :
+                   user?.role === 'Receptionist' ? 'bg-gradient-to-r from-teal-600 to-teal-700' :
+                   user?.role === 'Billing' ? 'bg-gradient-to-r from-yellow-600 to-yellow-700' :
+                   user?.role === 'IT' ? 'bg-gradient-to-r from-orange-600 to-orange-700' :
+                   user?.role === 'Accountant' ? 'bg-gradient-to-r from-pink-600 to-pink-700' : 'bg-gradient-to-r from-gray-400 to-gray-500';
 
   const handleLogout = () => {
     dispatch(logout()); // This now handles localStorage cleanup automatically
@@ -93,49 +104,86 @@ const App = () => {
         <div className="flex min-h-screen flex-col">
           {/* Loading Indicator */}
           {status === 'loading' && (
-            <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+            <div className="fixed inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-50">
+              <div className="glass-card p-8 flex flex-col items-center space-y-4">
+                <div className="loading-spinner h-12 w-12"></div>
+                <p className="text-gray-700 dark:text-gray-300 font-medium">Loading HMIS...</p>
+              </div>
             </div>
           )}
-          {/* Sticky Header */}
+          {/* Enhanced Header */}
           {status === 'succeeded' && user && (
-            <header className={`sticky top-0 z-20 ${roleColor} text-white p-4 shadow-md`}>
-              <div className="container mx-auto flex justify-between items-center">
-                <h1 className="text-xl font-bold">HMIS</h1>
+            <header className={`sticky top-0 z-20 ${roleColor} text-white shadow-2xl backdrop-blur-lg`}>
+              <div className="container mx-auto flex justify-between items-center p-4">
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm">{user.username || 'User'} ({user.role || 'Unknown'})</span>
-                  <button onClick={handleLogout} className="btn-secondary text-sm">
-                    <svg className="w-5 h-5 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h3a3 3 0 013 3v1"></path>
+                  <div className="flex items-center space-x-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-md">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h1 className="text-2xl font-bold gradient-text bg-gradient-to-r from-white to-gray-200 bg-clip-text text-transparent">
+                        Hospital Management
+                      </h1>
+                      <p className="text-white/80 text-sm">Information System</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-6">
+                  <DarkModeToggle />
+                  <div className="flex items-center space-x-3">
+                    <div className="text-right">
+                      <div className="text-white font-semibold">{user.username || 'User'}</div>
+                      <div className="text-white/80 text-sm">{user.role || 'Unknown'}</div>
+                    </div>
+                    <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-md">
+                      <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                    </div>
+                  </div>
+                  <button onClick={handleLogout} className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-200 backdrop-blur-md">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h3a3 3 0 013 3v1" />
                     </svg>
-                    Logout
+                    <span className="text-sm font-medium">Logout</span>
                   </button>
                 </div>
               </div>
             </header>
           )}
           <div className="flex flex-1">
-            {/* Sidebar Navigation */}
-            <nav className={`fixed top-0 left-0 h-full w-64 ${roleColor} text-white p-4 pt-16 md:block hidden z-10 shadow-lg`}>
-              <ul className="space-y-2">
-                <li>
-                  <NavLink to="/dashboard" className={({ isActive }) => `flex items-center py-2 px-3 rounded-md hover:bg-opacity-80 transition-colors ${isActive ? 'bg-white bg-opacity-20' : ''}`}>
-                    <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                    </svg>
-                    Dashboard
-                  </NavLink>
-                </li>
-                {(user?.role === 'Admin' || user?.role === 'Receptionist') && (
+            {/* Enhanced Sidebar Navigation */}
+            <nav className={`fixed top-0 left-0 h-full w-72 ${roleColor} text-white backdrop-blur-lg shadow-2xl md:block hidden z-10 pt-20`}>
+              <div className="p-6">
+                <div className="mb-8">
+                  <h3 className="text-lg font-semibold text-white/90 mb-2">Navigation</h3>
+                  <div className="w-12 h-1 bg-white/30 rounded-full"></div>
+                </div>
+                <ul className="space-y-3">
                   <li>
-                    <NavLink to="/patients/new" className={({ isActive }) => `flex items-center py-2 px-3 rounded-md hover:bg-opacity-80 transition-colors ${isActive ? 'bg-white bg-opacity-20' : ''}`}>
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
-                      </svg>
-                      Patients
+                    <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''} group`}>
+                      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mr-3 group-hover:bg-white/20 transition-all duration-200">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+                        </svg>
+                      </div>
+                      <span className="font-medium">Dashboard</span>
                     </NavLink>
                   </li>
-                )}
+                  {(user?.role === 'Admin' || user?.role === 'Receptionist') && (
+                    <li>
+                      <NavLink to="/patients/new" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''} group`}>
+                        <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mr-3 group-hover:bg-white/20 transition-all duration-200">
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+                          </svg>
+                        </div>
+                        <span className="font-medium">Patients</span>
+                      </NavLink>
+                    </li>
+                  )}
                 {(user?.role === 'Admin' || user?.role === 'Receptionist') && (
                   <li>
                     <NavLink to="/reception" className={({ isActive }) => `flex items-center py-2 px-3 rounded-md hover:bg-opacity-80 transition-colors ${isActive ? 'bg-white bg-opacity-20' : ''}`}>
@@ -364,9 +412,10 @@ const App = () => {
                   </li>
                 )}
               </ul>
+              </div>
             </nav>
             {/* Main Content */}
-            <main className="flex-1 p-4 md:ml-64 mt-16">
+            <main className="flex-1 p-6 md:ml-72 pt-6">
               <Routes>
                 <Route
                   path="/"

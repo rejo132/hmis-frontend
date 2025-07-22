@@ -19,6 +19,7 @@ import vitalsReducer from './slices/vitalsSlice';
 import assetReducer from './slices/assetSlice';
 import bedReducer from './slices/bedSlice';
 import communicationSettingsReducer from './slices/communicationSettingsSlice';
+import themeReducer from './slices/themeSlice';
 
 const store = configureStore({
   reducer: {
@@ -42,6 +43,7 @@ const store = configureStore({
     assets: assetReducer,
     beds: bedReducer,
     communicationSettings: communicationSettingsReducer,
+    theme: themeReducer,
   },
 });
 
