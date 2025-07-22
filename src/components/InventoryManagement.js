@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { toast } from 'react-hot-toast';
+import { useSelector, useDispatch } from 'react-redux';
+import toast from 'react-hot-toast';
+import { fetchInventory, dispenseItem } from '../slices/inventorySlice';
 
 const InventoryManagement = () => {
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const [items, setItems] = useState([]);
+  const { items, status, error } = useSelector((state) => state.inventory);
   const [dispenseForm, setDispenseForm] = useState({
     itemId: '',
     quantity: '',
@@ -12,19 +14,14 @@ const InventoryManagement = () => {
   });
 
   useEffect(() => {
-    const fetchInventory = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/inventory', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
-        const data = await response.json();
-        setItems(data);
-      } catch (error) {
-        toast.error('Error fetching inventory');
-      }
-    };
-    fetchInventory();
-  }, []);
+    dispatch(fetchInventory())
+      .unwrap()
+      .catch((err) => toast.error(`Error fetching inventory: ${err}`));
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (error) toast.error(`Error: ${error}`);
+  }, [error]);
 
   const handleDispenseChange = (e) => {
     setDispenseForm({ ...dispenseForm, [e.target.name]: e.target.value });
@@ -33,22 +30,22 @@ const InventoryManagement = () => {
   const handleDispenseSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/inventory/dispense', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ ...dispenseForm, dispensedBy: user.username }),
-      });
-      if (response.ok) {
-        toast.success('Medication dispensed successfully');
-        setDispenseForm({ itemId: '', quantity: '', patientId: '' });
-      } else {
-        toast.error('Failed to dispense medication');
-      }
-    } catch (error) {
-      toast.error('Error dispensing medication');
+      await dispatch(dispenseItem({ ...dispenseForm, dispensedBy: user.username })).unwrap();
+      toast.success('Medication dispensed successfully');
+      setDispenseForm({ itemId: '', quantity: '', patientId: '' });
+    } catch (err) {
+      toast.error(`Error dispensing medication: ${err}`);
+    }
+  };
+
+  // Helper function to get status based on quantity
+  const getItemStatus = (quantity) => {
+    if (quantity === 0) {
+      return <span className="text-red-600 font-semibold">Out of Stock</span>;
+    } else if (quantity <= 10) {
+      return <span className="text-yellow-600 font-semibold">Low Stock</span>;
+    } else {
+      return <span className="text-green-600 font-semibold">In Stock</span>;
     }
   };
 
@@ -92,41 +89,53 @@ const InventoryManagement = () => {
                 required
               />
             </div>
-            <button type="submit" className="btn-primary">Dispense</button>
+            <button type="submit" className="btn-primary" disabled={status === 'loading'}>
+              Dispense
+            </button>
           </form>
         </div>
         <div>
           <h3 className="text-xl font-semibold mb-4">Inventory</h3>
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border">
-              <thead>
-                <tr>
-                  <th className="py-2 px-4 border">Name</th>
-                  <th className="py-2 px-4 border">Quantity</th>
-                  <th className="py-2 px-4 border">Expiry Date</th>
-                  <th className="py-2 px-4 border">Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item) => (
-                  <tr key={item.id}>
-                    <td className="py-2 px-4 border">{item.name}</td>
-                    <td className="py-2 px-4 border">{item.quantity}</td>
-                    <td className="py-2 px-4 border">{item.expiry}</td>
-                    <td className="py-2 px-4 border">
-                      {new Date(item.expiry) < new Date() ? (
-                        <span className="text-red-600">Expired</span>
-                      ) : new Date(item.expiry) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) ? (
-                        <span className="text-yellow-600">Expiring Soon</span>
-                      ) : (
-                        <span className="text-green-600">Valid</span>
-                      )}
-                    </td>
+          {status === 'loading' ? (
+            <div className="text-center py-4">Loading inventory...</div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border">
+                <thead>
+                  <tr className="bg-gray-50">
+                    <th className="py-2 px-4 border text-left">ID</th>
+                    <th className="py-2 px-4 border text-left">Item Name</th>
+                    <th className="py-2 px-4 border text-left">Quantity</th>
+                    <th className="py-2 px-4 border text-left">Last Updated</th>
+                    <th className="py-2 px-4 border text-left">Status</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {Array.isArray(items) && items.length > 0 ? (
+                    items.map((item) => (
+                      <tr key={item.id} className="hover:bg-gray-50">
+                        <td className="py-2 px-4 border">{item.id}</td>
+                        <td className="py-2 px-4 border">{item.item_name}</td>
+                        <td className="py-2 px-4 border">{item.quantity}</td>
+                        <td className="py-2 px-4 border">
+                          {new Date(item.last_updated).toLocaleDateString()}
+                        </td>
+                        <td className="py-2 px-4 border">
+                          {getItemStatus(item.quantity)}
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="py-4 px-4 border text-center text-gray-500">
+                        No inventory items found
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </div>
     </div>

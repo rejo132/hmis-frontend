@@ -1,49 +1,53 @@
-import React, { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+import React, { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { fetchSecurityLogs } from '../slices/securitySlice';
 
 const SecurityLogs = () => {
-  const [logs, setLogs] = useState([]);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+  const { user } = useSelector((state) => state.auth);
+  const { logs, error } = useSelector((state) => state.security); // Removed unused 'status'
 
   useEffect(() => {
-    const fetchLogs = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/security-logs', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
-        const data = await response.json();
-        setLogs(data);
-      } catch (error) {
-        toast.error('Error fetching security logs');
-      }
-    };
-    fetchLogs();
-  }, []);
+    if (user && user.role === 'Admin') {
+      dispatch(fetchSecurityLogs())
+        .unwrap()
+        .catch((err) => toast.error(`Failed to load security logs: ${err}`));
+    } else {
+      navigate('/dashboard');
+      toast.error('Unauthorized access');
+    }
+  }, [user, dispatch, navigate]);
+
+  useEffect(() => {
+    if (error) toast.error(`Error: ${error}`);
+  }, [error]);
 
   return (
-    <div className="container mx-auto p-4 animate-fade-in">
+    <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">Security Logs</h2>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border">
-          <thead>
-            <tr>
-              <th className="py-2 px-4 border">Event</th>
-              <th className="py-2 px-4 border">User</th>
-              <th className="py-2 px-4 border">Status</th>
-              <th className="py-2 px-4 border">Timestamp</th>
+      <table className="w-full border-collapse border">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border p-2">Timestamp</th>
+            <th className="border p-2">User</th>
+            <th className="border p-2">Action</th>
+            <th className="border p-2">Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {logs.map((log) => (
+            <tr key={log.id}>
+              <td className="border p-2">{log.timestamp}</td>
+              <td className="border p-2">{log.user}</td>
+              <td className="border p-2">{log.action}</td>
+              <td className="border p-2">{log.details}</td>
             </tr>
-          </thead>
-          <tbody>
-            {logs.map((log) => (
-              <tr key={log.id}>
-                <td className="py-2 px-4 border">{log.event}</td>
-                <td className="py-2 px-4 border">{log.user}</td>
-                <td className="py-2 px-4 border">{log.status}</td>
-                <td className="py-2 px-4 border">{log.timestamp}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };

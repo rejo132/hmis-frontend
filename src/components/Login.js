@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+// src/components/Login.js
+import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../slices/authSlice';
+import toast from 'react-hot-toast';
 
 const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { status, error } = useSelector((state) => state.auth);
+  const { status, error, user } = useSelector((state) => state.auth);
+
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -18,14 +21,68 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Submitting login:', formData);
     try {
-      await dispatch(login(formData)).unwrap();
-      navigate('/dashboard');
+      const result = await dispatch(login(formData)).unwrap();
+      toast.success('Login successful');
+      // Role-based redirect
+      const role = result.user.role;
+      if (role === 'Admin') {
+        navigate('/dashboard');
+      } else if (role === 'Patient') {
+        navigate('/patient-portal');
+      } else if (role === 'Doctor') {
+        navigate('/doctor-portal');
+      } else if (role === 'Nurse') {
+        navigate('/vitals');
+      } else if (role === 'Lab') {
+        navigate('/lab-orders');
+      } else if (role === 'Receptionist') {
+        navigate('/reception');
+      } else if (role === 'Billing') {
+        navigate('/billing');
+      } else if (role === 'IT') {
+        navigate('/users/roles');
+      } else if (role === 'Accountant') {
+        navigate('/finance');
+      } else if (role === 'Pharmacist') {
+        navigate('/inventory');
+      } else {
+        navigate('/dashboard'); // Fallback
+      }
     } catch (err) {
-      console.error('Login failed:', err);
+      toast.error(`Login failed: ${err.message || 'Unknown error'}`);
     }
   };
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (status === 'succeeded' && user) {
+      const role = user.role;
+      if (role === 'Admin') {
+        navigate('/dashboard');
+      } else if (role === 'Patient') {
+        navigate('/patient-portal');
+      } else if (role === 'Doctor') {
+        navigate('/doctor-portal');
+      } else if (role === 'Nurse') {
+        navigate('/vitals');
+      } else if (role === 'Lab') {
+        navigate('/lab-orders');
+      } else if (role === 'Receptionist') {
+        navigate('/reception');
+      } else if (role === 'Billing') {
+        navigate('/billing');
+      } else if (role === 'IT') {
+        navigate('/users/roles');
+      } else if (role === 'Accountant') {
+        navigate('/finance');
+      } else if (role === 'Pharmacist') {
+        navigate('/inventory');
+      } else {
+        navigate('/dashboard');
+      }
+    }
+  }, [status, user, navigate]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">

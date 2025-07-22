@@ -7,29 +7,57 @@ import toast from 'react-hot-toast';
 const EMR = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
-  const { records, error } = useSelector((state) => state.records);
+  const { records, error, status } = useSelector((state) => state.records || {});
   const { user } = useSelector((state) => state.auth);
 
-  // Mock patient data for UI (replace with real data fetch if available)
-  const patient = records.length > 0 ? records[0] : {
-    name: 'Mary Kim',
-    age: 32,
-    gender: 'Female',
-    patient_id: 1,
-    vital_signs: 'BP: 120/80, Temp: 37.1°C',
-    diagnosis: 'Malaria',
-    prescription: 'Artemether 80mg – 3 days',
-    notes: 'Follow up in 1 week',
+  // Helper function to format vital signs
+  const formatVitalSigns = (vitalSigns) => {
+    if (!vitalSigns) return 'N/A';
+    if (typeof vitalSigns === 'string') return vitalSigns;
+    if (typeof vitalSigns === 'object') {
+      const { bp, heart_rate, temperature, respiratory_rate } = vitalSigns;
+      const parts = [];
+      if (bp) parts.push(`BP: ${bp}`);
+      if (heart_rate) parts.push(`HR: ${heart_rate}`);
+      if (temperature) parts.push(`Temp: ${temperature}°C`);
+      if (respiratory_rate) parts.push(`RR: ${respiratory_rate}`);
+      return parts.length > 0 ? parts.join(', ') : 'N/A';
+    }
+    return 'N/A';
   };
+
+  // Mock patient data for UI (replace with real data fetch if available)
+  const getPatientData = () => {
+    const recordsArray = Array.isArray(records) ? records : records?.records || [];
+    return recordsArray.length > 0 ? recordsArray[0] : {
+      name: 'Mary Kim',
+      age: 32,
+      gender: 'Female',
+      patient_id: 1,
+      vital_signs: 'BP: 120/80, Temp: 37.1°C',
+      diagnosis: 'Malaria',
+      prescription: 'Artemether 80mg – 3 days',
+      notes: 'Follow up in 1 week',
+    };
+  };
+
+  const patient = getPatientData();
 
   useEffect(() => {
     if (user && (user.role === 'Admin' || user.role === 'Doctor')) {
       dispatch(fetchRecords(1))
         .unwrap()
         .then(() => toast.success('Records Loaded'))
-        .catch((err) => toast.error(`Failed to load records: ${err.message}`));
+        .catch((err) => toast.error(`Failed to load records: ${err}`));
+    } else {
+      navigate('/dashboard');
+      toast.error('Unauthorized access');
     }
-  }, [dispatch, user]);
+  }, [dispatch, user, navigate]);
+
+  useEffect(() => {
+    if (error) toast.error(`Error: ${error}`);
+  }, [error]);
 
   const handleAction = (action) => {
     toast.success(`${action} clicked`);
@@ -59,7 +87,7 @@ const EMR = () => {
         </div>
         <div className="border-t pt-4">
           <h3 className="font-bold">Vitals</h3>
-          <p>{patient.vital_signs || 'N/A'}</p>
+          <p>{formatVitalSigns(patient.vital_signs)}</p>
         </div>
         <div className="border-t pt-4">
           <h3 className="font-bold">Diagnosis</h3>
@@ -77,6 +105,7 @@ const EMR = () => {
           <button
             onClick={() => handleAction('Edit')}
             className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+            disabled={status === 'loading'}
           >
             Edit
           </button>

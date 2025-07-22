@@ -1,40 +1,30 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import axios from 'axios';
+import { getRecords, createMedicalRecord } from '../api/api';
 
 export const fetchRecords = createAsyncThunk(
   'records/fetchRecords',
-  async (page, { getState, rejectWithValue }) => {
+  async (page = 1, { rejectWithValue }) => {
     try {
-      const { auth } = getState();
-      const response = await axios.get(`http://localhost:5000/records?page=${page}`, {
-        headers: {
-          Authorization: `Bearer ${auth.user?.access_token || ''}`,
-        },
-      });
+      const response = await getRecords(page);
       console.log('Fetch records response:', response.data);
       return response.data;
     } catch (err) {
       console.error('Fetch records failed:', err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
 
 export const addRecord = createAsyncThunk(
   'records/addRecord',
-  async (recordData, { getState, rejectWithValue }) => {
+  async (recordData, { rejectWithValue }) => {
     try {
-      const { auth } = getState();
-      const response = await axios.post('http://localhost:5000/records', recordData, {
-        headers: {
-          Authorization: `Bearer ${auth.user?.access_token || ''}`,
-        },
-      });
+      const response = await createMedicalRecord(recordData);
       console.log('Add record response:', response.data);
       return response.data;
     } catch (err) {
       console.error('Add record failed:', err.message);
-      return rejectWithValue(err.response?.data || { message: err.message });
+      return rejectWithValue(err.response?.data?.message || err.message);
     }
   }
 );
@@ -47,6 +37,7 @@ const recordSlice = createSlice({
     error: null,
     page: 1,
     pages: 1,
+    total: 0,
   },
   reducers: {},
   extraReducers: (builder) => {
@@ -57,14 +48,15 @@ const recordSlice = createSlice({
       })
       .addCase(fetchRecords.fulfilled, (state, action) => {
         state.status = 'succeeded';
-        state.records = action.payload.records;
-        state.page = action.payload.page;
-        state.pages = action.payload.pages;
+        state.records = action.payload.records || [];
+        state.page = action.payload.current_page || action.payload.page || 1;
+        state.pages = action.payload.pages || 1;
+        state.total = action.payload.total || 0;
         state.error = null;
       })
       .addCase(fetchRecords.rejected, (state, action) => {
         state.status = 'failed';
-        state.error = action.payload.message;
+        state.error = action.payload;
       })
       .addCase(addRecord.fulfilled, (state, action) => {
         state.records.push(action.payload);

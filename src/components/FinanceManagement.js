@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { toast } from 'react-hot-toast';
+import { useSelector, useDispatch } from 'react-redux';
+import toast from 'react-hot-toast';
+import { fetchExpenses, fetchReimbursements, fetchPayroll, addExpense } from '../slices/financeSlice';
 
 const FinanceManagement = () => {
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const [expenses, setExpenses] = useState([]);
-  const [reimbursements, setReimbursements] = useState([]);
-  const [payroll, setPayroll] = useState([]);
+  const { expenses, reimbursements, payroll, status, error } = useSelector((state) => state.finance || {});
   const [formData, setFormData] = useState({
     description: '',
     amount: '',
@@ -16,26 +16,21 @@ const FinanceManagement = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [expRes, reimbRes, payRes] = await Promise.all([
-          fetch('http://localhost:5000/finance/expenses', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          }),
-          fetch('http://localhost:5000/finance/reimbursements', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          }),
-          fetch('http://localhost:5000/finance/payroll', {
-            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-          }),
+        await Promise.all([
+          dispatch(fetchExpenses()).unwrap(),
+          dispatch(fetchReimbursements()).unwrap(),
+          dispatch(fetchPayroll()).unwrap(),
         ]);
-        setExpenses(await expRes.json());
-        setReimbursements(await reimbRes.json());
-        setPayroll(await payRes.json());
-      } catch (error) {
-        toast.error('Error fetching financial data');
+      } catch (err) {
+        toast.error(`Error fetching financial data: ${err}`);
       }
     };
     fetchData();
-  }, []);
+  }, [dispatch]);
+
+  useEffect(() => {
+    if (error) toast.error(`Error: ${error}`);
+  }, [error]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -44,24 +39,11 @@ const FinanceManagement = () => {
   const handleExpenseSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/finance/expenses', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ ...formData, recordedBy: user.username }),
-      });
-      if (response.ok) {
-        toast.success('Expense recorded successfully');
-        setFormData({ description: '', amount: '', date: '' });
-        const newExpense = await response.json();
-        setExpenses([...expenses, newExpense]);
-      } else {
-        toast.error('Failed to record expense');
-      }
-    } catch (error) {
-      toast.error('Error recording expense');
+      await dispatch(addExpense({ ...formData, recordedBy: user.username })).unwrap();
+      toast.success('Expense recorded successfully');
+      setFormData({ description: '', amount: '', date: '' });
+    } catch (err) {
+      toast.error(`Error recording expense: ${err}`);
     }
   };
 
@@ -105,7 +87,9 @@ const FinanceManagement = () => {
                 required
               />
             </div>
-            <button type="submit" className="btn-primary">Record Expense</button>
+            <button type="submit" className="btn-primary" disabled={status === 'loading'}>
+              Record Expense
+            </button>
           </form>
         </div>
         <div>
@@ -120,7 +104,13 @@ const FinanceManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {expenses.map((exp) => (
+                {Array.isArray(expenses) ? expenses.map((exp) => (
+                  <tr key={exp.id}>
+                    <td className="py-2 px-4 border">{exp.description}</td>
+                    <td className="py-2 px-4 border">{exp.amount}</td>
+                    <td className="py-2 px-4 border">{exp.date}</td>
+                  </tr>
+                )) : expenses?.expenses?.map((exp) => (
                   <tr key={exp.id}>
                     <td className="py-2 px-4 border">{exp.description}</td>
                     <td className="py-2 px-4 border">{exp.amount}</td>
@@ -143,7 +133,13 @@ const FinanceManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {reimbursements.map((reimb) => (
+                {Array.isArray(reimbursements) ? reimbursements.map((reimb) => (
+                  <tr key={reimb.id}>
+                    <td className="py-2 px-4 border">{reimb.claimId}</td>
+                    <td className="py-2 px-4 border">{reimb.amount}</td>
+                    <td className="py-2 px-4 border">{reimb.status}</td>
+                  </tr>
+                )) : reimbursements?.reimbursements?.map((reimb) => (
                   <tr key={reimb.id}>
                     <td className="py-2 px-4 border">{reimb.claimId}</td>
                     <td className="py-2 px-4 border">{reimb.amount}</td>
@@ -166,7 +162,13 @@ const FinanceManagement = () => {
                 </tr>
               </thead>
               <tbody>
-                {payroll.map((pay) => (
+                {Array.isArray(payroll) ? payroll.map((pay) => (
+                  <tr key={pay.id}>
+                    <td className="py-2 px-4 border">{pay.employee}</td>
+                    <td className="py-2 px-4 border">{pay.amount}</td>
+                    <td className="py-2 px-4 border">{pay.date}</td>
+                  </tr>
+                )) : payroll?.payroll?.map((pay) => (
                   <tr key={pay.id}>
                     <td className="py-2 px-4 border">{pay.employee}</td>
                     <td className="py-2 px-4 border">{pay.amount}</td>

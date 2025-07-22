@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { getPatients } from '../api/api'; // Use api.js client
 import { fetchPatients } from '../slices/patientSlice';
+import { createAppointment } from '../api/api'; // Use api.js client
 import { scheduleAppointment } from '../slices/appointmentSlice';
 
 const AppointmentForm = () => {
@@ -17,7 +19,11 @@ const AppointmentForm = () => {
 
   useEffect(() => {
     if (user) {
-      dispatch(fetchPatients(1));
+      getPatients(1).then((response) => {
+        dispatch(fetchPatients.fulfilled(response.data.patients, 'fetchPatients'));
+      }).catch((err) => {
+        console.error('Failed to fetch patients:', err);
+      });
     }
   }, [dispatch, user]);
 
@@ -31,7 +37,8 @@ const AppointmentForm = () => {
     e.preventDefault();
     try {
       console.log('Submitting appointment:', formData); // Debug log
-      await dispatch(scheduleAppointment({ ...formData, status: 'Scheduled' })).unwrap();
+      const response = await createAppointment({ ...formData, status: 'Scheduled' }); // Call real API
+      await dispatch(scheduleAppointment({ ...formData, id: response.data.id, status: 'Scheduled' })).unwrap();
       navigate('/dashboard');
     } catch (err) {
       console.error('Failed to schedule appointment:', err);

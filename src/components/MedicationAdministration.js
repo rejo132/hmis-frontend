@@ -1,15 +1,22 @@
-import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { toast } from 'react-hot-toast';
+import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import toast from 'react-hot-toast';
+import { addMedication } from '../slices/medicationSlice';
 
 const MedicationAdministration = () => {
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
+  const { status, error } = useSelector((state) => state.medications);
   const [formData, setFormData] = useState({
     patientId: '',
     medication: '',
     dosage: '',
     time: '',
   });
+
+  useEffect(() => {
+    if (error) toast.error(`Error: ${error}`);
+  }, [error]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -18,22 +25,11 @@ const MedicationAdministration = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/medications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ ...formData, administeredBy: user.username }),
-      });
-      if (response.ok) {
-        toast.success('Medication recorded successfully');
-        setFormData({ patientId: '', medication: '', dosage: '', time: '' });
-      } else {
-        toast.error('Failed to record medication');
-      }
-    } catch (error) {
-      toast.error('Error recording medication');
+      await dispatch(addMedication({ ...formData, administeredBy: user.username })).unwrap();
+      toast.success('Medication recorded successfully');
+      setFormData({ patientId: '', medication: '', dosage: '', time: '' });
+    } catch (err) {
+      toast.error(`Error recording medication: ${err}`);
     }
   };
 
@@ -85,7 +81,9 @@ const MedicationAdministration = () => {
             required
           />
         </div>
-        <button type="submit" className="btn-primary">Record Administration</button>
+        <button type="submit" className="btn-primary" disabled={status === 'loading'}>
+          Record Administration
+        </button>
       </form>
     </div>
   );

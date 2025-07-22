@@ -1,130 +1,102 @@
-import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { toast } from 'react-hot-toast';
+import React, { useEffect, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
+import { fetchUserRoles, updateRole } from '../slices/userRoleSlice';
 
 const UserRoleManagement = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
-  const [users, setUsers] = useState([]);
-  const [formData, setFormData] = useState({
-    userId: '',
-    role: '',
-    permissions: '',
-  });
+  const { users, status, error } = useSelector((state) => state.userRoles);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [newRole, setNewRole] = useState('');
 
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await fetch('http://localhost:5000/users/roles', {
-          headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-        });
-        const data = await response.json();
-        setUsers(data);
-      } catch (error) {
-        toast.error('Error fetching users');
-      }
-    };
-    fetchUsers();
-  }, []);
+    if (user && user.role === 'Admin') {
+      dispatch(fetchUserRoles())
+        .unwrap()
+        .catch((err) => toast.error(`Failed to load user roles: ${err}`));
+    } else {
+      navigate('/dashboard');
+      toast.error('Unauthorized access');
+    }
+  }, [user, dispatch, navigate]);
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
+  useEffect(() => {
+    if (error) toast.error(`Error: ${error}`);
+  }, [error]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleRoleChange = async (userId) => {
     try {
-      const response = await fetch('http://localhost:5000/users/roles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ ...formData, updatedBy: user.username }),
-      });
-      if (response.ok) {
-        toast.success('User role updated successfully');
-        setFormData({ userId: '', role: '', permissions: '' });
-        const updatedUser = await response.json();
-        setUsers([...users.filter(u => u.id !== formData.userId), updatedUser]);
-      } else {
-        toast.error('Failed to update user role');
-      }
-    } catch (error) {
-      toast.error('Error updating user role');
+      await dispatch(updateRole({ userId, role: newRole })).unwrap();
+      toast.success('User Role Updated');
+      setSelectedUser(null);
+      setNewRole('');
+    } catch (err) {
+      toast.error(`Failed to update role: ${err}`);
     }
   };
 
   return (
-    <div className="container mx-auto p-4 animate-fade-in">
+    <div className="container mx-auto p-4">
       <h2 className="text-2xl font-bold mb-4">User Role Management</h2>
-      <form onSubmit={handleSubmit} className="space-y-4 max-w-lg mb-8">
-        <div>
-          <label className="block text-sm font-medium text-gray-700">User ID</label>
-          <input
-            type="text"
-            name="userId"
-            value={formData.userId}
-            onChange={handleChange}
-            className="mt-1 p-2 block w-full border rounded-md"
-            required
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Role</label>
-          <select
-            name="role"
-            value={formData.role}
-            onChange={handleChange}
-            className="mt-1 p-2 block w-full border rounded-md"
-            required
-          >
-            <option value="">Select Role</option>
-            <option value="Admin">Admin</option>
-            <option value="Doctor">Doctor</option>
-            <option value="Nurse">Nurse</option>
-            <option value="Lab">Lab</option>
-            <option value="Pharmacist">Pharmacist</option>
-            <option value="Receptionist">Receptionist</option>
-            <option value="Billing">Billing</option>
-            <option value="IT">IT</option>
-            <option value="Accountant">Accountant</option>
-            <option value="Patient">Patient</option>
-          </select>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700">Permissions (comma-separated)</label>
-          <input
-            type="text"
-            name="permissions"
-            value={formData.permissions}
-            onChange={handleChange}
-            className="mt-1 p-2 block w-full border rounded-md"
-            required
-          />
-        </div>
-        <button type="submit" className="btn-primary">Update Role</button>
-      </form>
-      <h3 className="text-xl font-semibold mb-4">User Roles</h3>
-      <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border">
-          <thead>
-            <tr>
-              <th className="py-2 px-4 border">Username</th>
-              <th className="py-2 px-4 border">Role</th>
-              <th className="py-2 px-4 border">Permissions</th>
+      <table className="w-full border-collapse border">
+        <thead>
+          <tr className="bg-gray-100">
+            <th className="border p-2">Username</th>
+            <th className="border p-2">Current Role</th>
+            <th className="border p-2">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {users.map((u) => (
+            <tr key={u.id}>
+              <td className="border p-2">{u.username}</td>
+              <td className="border p-2">{u.role}</td>
+              <td className="border p-2">
+                {selectedUser === u.id ? (
+                  <div className="flex space-x-2">
+                    <select
+                      value={newRole}
+                      onChange={(e) => setNewRole(e.target.value)}
+                      className="p-2 border rounded"
+                    >
+                      <option value="">Select Role</option>
+                      <option value="Admin">Admin</option>
+                      <option value="Doctor">Doctor</option>
+                      <option value="Nurse">Nurse</option>
+                      <option value="Patient">Patient</option>
+                      <option value="Lab">Lab</option>
+                      <option value="Reception">Reception</option>
+                    </select>
+                    <button
+                      onClick={() => handleRoleChange(u.id)}
+                      className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+                      disabled={status === 'loading' || !newRole}
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => setSelectedUser(null)}
+                      className="bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setSelectedUser(u.id)}
+                    className="bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+                  >
+                    Edit Role
+                  </button>
+                )}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {users.map((u) => (
-              <tr key={u.id}>
-                <td className="py-2 px-4 border">{u.username}</td>
-                <td className="py-2 px-4 border">{u.role}</td>
-                <td className="py-2 px-4 border">{u.permissions.join(', ')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };

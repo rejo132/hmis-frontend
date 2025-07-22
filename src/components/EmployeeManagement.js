@@ -2,34 +2,35 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { fetchEmployees, addEmployee } from '../slices/employeeSlice';
 
 const EmployeeManagement = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const { employees, status, error } = useSelector((state) => state.employees);
   const [formData, setFormData] = useState({
     name: '',
     role: 'Doctor',
     schedule: '',
     salary: '',
   });
-  const [employees, setEmployees] = useState([]);
 
   useEffect(() => {
     if (user && user.role === 'Admin') {
-      fetch('http://localhost:5000/employees', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setEmployees(data.employees);
-          toast.success('Employees Loaded');
-        })
-        .catch((err) => toast.error('Failed to load employees'));
+      dispatch(fetchEmployees())
+        .unwrap()
+        .then(() => toast.success('Employees Loaded'))
+        .catch((err) => toast.error(`Failed to load employees: ${err}`));
     } else {
       navigate('/dashboard');
+      toast.error('Unauthorized access');
     }
   }, [user, dispatch, navigate]);
+
+  useEffect(() => {
+    if (error) toast.error(`Error: ${error}`);
+  }, [error]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -38,20 +39,11 @@ const EmployeeManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/employees', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(formData),
-      }).then((res) => res.json());
-      setEmployees([...employees, response]);
+      await dispatch(addEmployee(formData)).unwrap();
       toast.success('Employee Added');
       setFormData({ name: '', role: 'Doctor', schedule: '', salary: '' });
     } catch (err) {
-      console.error('Failed to add employee:', err);
-      toast.error('Failed to add employee');
+      toast.error(`Failed to add employee: ${err}`);
     }
   };
 
@@ -125,6 +117,7 @@ const EmployeeManagement = () => {
             <button
               type="submit"
               className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+              disabled={status === 'loading'}
             >
               Add Employee
             </button>

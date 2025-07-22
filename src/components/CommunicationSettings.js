@@ -1,61 +1,63 @@
-import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+
+import React, { useEffect, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { fetchCommunicationSettings, addCommunication, toggleCommunicationSetting } from '../slices/communicationSettingsSlice';
 
 const CommunicationSettings = () => {
   const navigate = useNavigate();
-  const { user } = useSelector((state) => state.auth);
-  const [settings, setSettings] = useState({
-    sms: true,
-    email: true,
-    chat: true,
-  });
+  const dispatch = useDispatch();
+  const { user, access_token } = useSelector((state) => state.auth);
+  const { settings, status, error } = useSelector((state) => state.communicationSettings);
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    if (user) {
-      fetch('http://localhost:5000/communications', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setSettings(data.settings);
-          toast.success('Communication Settings Loaded');
-        })
-        .catch((err) => toast.error('Failed to load settings'));
+    if (user && user.role === 'Admin') {
+      dispatch(fetchCommunicationSettings());
     } else {
       navigate('/dashboard');
       toast.error('Unauthorized access');
     }
-  }, [user, navigate]);
+  }, [user, dispatch, navigate]);
 
-  const handleToggle = (key) => {
-    setSettings((prev) => ({ ...prev, [key]: !prev[key] }));
-  };
+  useEffect(() => {
+    if (error) toast.error(`Failed to load settings: ${error}`);
+    else if (settings && status === 'succeeded') toast.success('Communication Settings Loaded');
+  }, [error, settings, status]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
     try {
-      await fetch('http://localhost:5000/communications', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ message, type: settings.sms ? 'sms' : settings.email ? 'email' : 'chat' }),
-      }).then((res) => res.json());
+      await dispatch(
+        addCommunication({
+          message,
+          type: settings.sms ? 'sms' : settings.email ? 'email' : 'chat',
+          token: access_token,
+        })
+      ).unwrap();
       toast.success('Message Sent');
       setMessage('');
     } catch (err) {
       console.error('Failed to send message:', err);
-      toast.error('Failed to send message');
+      toast.error(`Failed to send message: ${err}`);
+    }
+  };
+
+  const handleToggle = async (setting) => {
+    try {
+      await dispatch(toggleCommunicationSetting({ setting, token: access_token })).unwrap();
+      toast.success(`${setting} setting updated`);
+    } catch (err) {
+      toast.error(`Failed to update ${setting}: ${err}`);
     }
   };
 
   return (
     <div className="container mx-auto p-6 animate-fade-in">
       <h2 className="text-3xl font-bold mb-6 text-gray-900">Communication Settings</h2>
+      {status === 'loading' && <p>Loading...</p>}
+      {error && <p className="text-red-500 mb-4">{error}</p>}
       <div className="card mb-8">
         <h3 className="text-xl font-semibold mb-4">Notification Preferences</h3>
         <div className="space-y-4">
@@ -63,9 +65,10 @@ const CommunicationSettings = () => {
             <input
               type="checkbox"
               id="sms"
-              checked={settings.sms}
+              checked={settings.sms || false}
               onChange={() => handleToggle('sms')}
               className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              disabled={status === 'loading'}
             />
             <label htmlFor="sms" className="ml-3 text-gray-700">
               Enable SMS Notifications
@@ -75,9 +78,10 @@ const CommunicationSettings = () => {
             <input
               type="checkbox"
               id="email"
-              checked={settings.email}
+              checked={settings.email || false}
               onChange={() => handleToggle('email')}
               className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              disabled={status === 'loading'}
             />
             <label htmlFor="email" className="ml-3 text-gray-700">
               Enable Email Notifications
@@ -87,9 +91,10 @@ const CommunicationSettings = () => {
             <input
               type="checkbox"
               id="chat"
-              checked={settings.chat}
+              checked={settings.chat || false}
               onChange={() => handleToggle('chat')}
               className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+              disabled={status === 'loading'}
             />
             <label htmlFor="chat" className="ml-3 text-gray-700">
               Enable Internal Chat
@@ -114,13 +119,14 @@ const CommunicationSettings = () => {
             />
           </div>
           <div className="flex space-x-4">
-            <button type="submit" className="btn-primary flex-1">
+            <button type="submit" className="btn-primary flex-1" disabled={status === 'loading'}>
               Send
             </button>
             <button
               type="button"
               onClick={() => navigate('/dashboard')}
               className="btn-secondary flex-1"
+              disabled={status === 'loading'}
             >
               Cancel
             </button>

@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
+import { addLabOrder } from '../slices/labSlice';
 
 const LabOrderForm = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const [formData, setFormData] = useState({
     patient_id: '',
     test_type: '',
@@ -19,19 +22,11 @@ const LabOrderForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await fetch('http://localhost:5000/lab-orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(formData),
-      }).then((res) => res.json());
+      await dispatch(addLabOrder(formData)).unwrap();
       toast.success('Lab Order Created');
       navigate('/dashboard');
     } catch (err) {
-      console.error('Failed to create lab order:', err);
-      toast.error('Failed to create lab order');
+      toast.error(`Failed to create lab order: ${err}`);
     }
   };
 
