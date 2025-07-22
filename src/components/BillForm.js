@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { createBill } from '../api/api'; // Use api.js client
 import toast from 'react-hot-toast';
 
 const BillForm = () => {
@@ -24,19 +25,12 @@ const BillForm = () => {
     try {
       const finalAmount = formData.amount - (formData.discount || 0);
       const billData = { ...formData, amount: finalAmount };
-      await fetch('http://localhost:5000/bills', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify(billData),
-      }).then((res) => res.json());
+      await createBill(billData); // Call real API
       toast.success('Bill Created');
       navigate('/dashboard');
     } catch (err) {
       console.error('Failed to create bill:', err);
-      toast.error('Failed to create bill');
+      toast.error(`Failed to create bill: ${err.response?.data?.message || 'Error'}`);
     }
   };
 

@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
+import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import { createPatient } from '../api/api';
 import { addPatient } from '../slices/patientSlice';
 import toast from 'react-hot-toast';
 
@@ -22,6 +23,10 @@ const PatientForm = () => {
     insurance: '',
   });
 
+  useEffect(() => {
+    if (error) toast.error(`Error: ${error}`);
+  }, [error]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -29,12 +34,12 @@ const PatientForm = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await dispatch(addPatient(formData)).unwrap();
+      const response = await createPatient(formData);
+      await dispatch(addPatient({ ...formData, id: response.data.id })).unwrap();
       toast.success('Patient Added');
       navigate('/dashboard');
     } catch (err) {
-      console.error('Failed to add patient:', err);
-      toast.error(`Failed to add patient: ${err.message}`);
+      toast.error(`Failed to add patient: ${err.response?.data?.message || err.message}`);
     }
   };
 

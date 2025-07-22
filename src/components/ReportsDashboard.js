@@ -1,106 +1,155 @@
 import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import { Bar } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
+import { fetchPatients } from '../slices/patientSlice';
+import { fetchBills } from '../slices/billingSlice';
+import { fetchAppointments } from '../slices/appointmentSlice';
+import { getAuditLogs } from '../api/api';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const ReportsDashboard = () => {
+  const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const { patients, error: patientError } = useSelector((state) => state.patients || {});
+  const { bills, error: billError } = useSelector((state) => state.bills || {});
+  const { appointments, error: appointmentError } = useSelector((state) => state.appointments || {});
   const [auditLogs, setAuditLogs] = useState([]);
-
-  const financialData = {
-    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-    datasets: [
-      {
-        label: 'Revenue (KES)',
-        data: [500000, 600000, 550000, 700000, 650000, 800000],
-        backgroundColor: 'rgba(79, 70, 229, 0.6)',
-        borderColor: 'rgba(79, 70, 229, 1)',
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const clinicalData = {
-    labels: ['Flu', 'Injuries', 'Infections', 'Chronic'],
-    datasets: [
-      {
-        label: 'Cases',
-        data: [120, 80, 100, 50],
-        backgroundColor: 'rgba(16, 185, 129, 0.6)',
-        borderColor: 'rgba(16, 185, 129, 1)',
-        borderWidth: 1,
-      },
-    ],
-  };
-
-  const chartOptions = {
-    responsive: true,
-    plugins: {
-      legend: { position: 'top' },
-      title: { display: true, text: '' },
-    },
-    animation: {
-      duration: 1000,
-      easing: 'easeOutQuart',
-    },
-  };
+  const [auditError, setAuditError] = useState(null);
 
   useEffect(() => {
-    if (user) {
-      fetch('http://localhost:5000/audit-logs', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setAuditLogs(data.auditLogs);
-          toast.success('Audit Logs Loaded');
+    if (user && user.role === 'Admin') {
+      dispatch(fetchPatients(1))
+        .unwrap()
+        .catch((err) => toast.error(`Failed to load patients: ${err}`));
+      dispatch(fetchBills(1))
+        .unwrap()
+        .catch((err) => toast.error(`Failed to load bills: ${err}`));
+      dispatch(fetchAppointments(1))
+        .unwrap()
+        .catch((err) => toast.error(`Failed to load appointments: ${err}`));
+      getAuditLogs(user.access_token)
+        .then((response) => {
+          // Handle both array and object responses
+          const logsData = Array.isArray(response.data) ? response.data : response.data.logs || response.data.auditLogs || [];
+          setAuditLogs(logsData);
         })
-        .catch((err) => toast.error('Failed to load audit logs'));
+        .catch((err) => setAuditError(err.response?.data?.message || 'Failed to fetch audit logs'));
     } else {
       navigate('/dashboard');
       toast.error('Unauthorized access');
     }
-  }, [user, navigate]);
+  }, [user, dispatch, navigate]);
+
+  useEffect(() => {
+    if (patientError) toast.error(`Error: ${patientError}`);
+    if (billError) toast.error(`Error: ${billError}`);
+    if (appointmentError) toast.error(`Error: ${appointmentError}`);
+    if (auditError) toast.error(`Error: ${auditError}`);
+  }, [patientError, billError, appointmentError, auditError]);
+
+  // Helper function to get array from potential object
+  const getArrayFromData = (data) => {
+    if (Array.isArray(data)) return data;
+    if (data && typeof data === 'object') {
+      // Try common property names
+      return data.patients || data.bills || data.appointments || data.items || [];
+    }
+    return [];
+  };
 
   return (
-    <div className="container mx-auto p-6 animate-fade-in">
-      <h2 className="text-3xl font-bold mb-6 text-gray-900">Reports Dashboard</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-        <div className="card">
-          <h3 className="text-xl font-semibold mb-4">Financial Report</h3>
-          <Bar data={financialData} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Monthly Revenue' } } }} />
-        </div>
-        <div className="card">
-          <h3 className="text-xl font-semibold mb-4">Clinical Report</h3>
-          <Bar data={clinicalData} options={{ ...chartOptions, plugins: { ...chartOptions.plugins, title: { ...chartOptions.plugins.title, text: 'Case Distribution' } } }} />
-        </div>
-      </div>
-      <div className="card">
-        <h3 className="text-xl font-semibold mb-4">Audit Logs</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
+    <div className="container mx-auto p-4">
+      <h2 className="text-2xl font-bold mb-4">Reports Dashboard</h2>
+      <div className="space-y-8">
+        <div>
+          <h3 className="text-xl font-semibold mb-4">Patient Report</h3>
+          <table className="w-full border-collapse border">
             <thead>
               <tr className="bg-gray-100">
-                <th className="border border-gray-200 p-3 text-left">ID</th>
-                <th className="border border-gray-200 p-3 text-left">User</th>
-                <th className="border border-gray-200 p-3 text-left">Action</th>
-                <th className="border border-gray-200 p-3 text-left">Timestamp</th>
+                <th className="border p-2">ID</th>
+                <th className="border p-2">Name</th>
+                <th className="border p-2">Contact</th>
               </tr>
             </thead>
             <tbody>
-              {auditLogs.map((log, index) => (
-                <tr key={log.id} className={`table-row ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                  <td className="border border-gray-200 p-3">{log.id}</td>
-                  <td className="border border-gray-200 p-3">{log.user_id}</td>
-                  <td className="border border-gray-200 p-3">{log.action}</td>
-                  <td className="border border-gray-200 p-3">{log.timestamp}</td>
+              {getArrayFromData(patients).map((patient) => (
+                <tr key={patient.id}>
+                  <td className="border p-2">{patient.id}</td>
+                  <td className="border p-2">{patient.name}</td>
+                  <td className="border p-2">{patient.contact}</td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 className="text-xl font-semibold mb-4">Billing Report</h3>
+          <table className="w-full border-collapse border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2">Bill ID</th>
+                <th className="border p-2">Amount</th>
+                <th className="border p-2">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {getArrayFromData(bills).map((bill) => (
+                <tr key={bill.id}>
+                  <td className="border p-2">{bill.id}</td>
+                  <td className="border p-2">{bill.amount}</td>
+                  <td className="border p-2">{bill.payment_status}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 className="text-xl font-semibold mb-4">Appointment Report</h3>
+          <table className="w-full border-collapse border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2">Date</th>
+                <th className="border p-2">Patient</th>
+                <th className="border p-2">Doctor</th>
+              </tr>
+            </thead>
+            <tbody>
+              {getArrayFromData(appointments).map((appt) => (
+                <tr key={appt.id}>
+                  <td className="border p-2">{appt.date}</td>
+                  <td className="border p-2">{appt.patient_name}</td>
+                  <td className="border p-2">{appt.doctor}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 className="text-xl font-semibold mb-4">Audit Logs</h3>
+          <table className="w-full border-collapse border">
+            <thead>
+              <tr className="bg-gray-100">
+                <th className="border p-2">Timestamp</th>
+                <th className="border p-2">User</th>
+                <th className="border p-2">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Array.isArray(auditLogs) && auditLogs.length > 0 ? auditLogs.map((log) => (
+                <tr key={log.id}>
+                  <td className="border p-2">{log.timestamp}</td>
+                  <td className="border p-2">{log.user}</td>
+                  <td className="border p-2">{log.action}</td>
+                </tr>
+              )) : (
+                <tr>
+                  <td colSpan="3" className="border p-2 text-center text-gray-500">
+                    No audit logs found
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>

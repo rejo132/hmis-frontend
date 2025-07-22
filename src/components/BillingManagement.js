@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { useSelector } from 'react-redux';
-import { toast } from 'react-hot-toast';
+import { useSelector, useDispatch } from 'react-redux';
+import toast from 'react-hot-toast';
+import { processRefund, submitClaim } from '../slices/billingSlice';
 
 const BillingManagement = () => {
-  const { user } = useSelector((state) => state.auth);
+  const dispatch = useDispatch();
+  const { user, access_token } = useSelector((state) => state.auth);
+  const { status, error } = useSelector((state) => state.billing || {});
   const [formData, setFormData] = useState({
     billId: '',
     refundAmount: '',
@@ -19,55 +22,45 @@ const BillingManagement = () => {
   const handleRefundSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/bills/refunds', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({ billId: formData.billId, refundAmount: formData.refundAmount, processedBy: user.username }),
-      });
-      if (response.ok) {
-        toast.success('Refund processed successfully');
-        setFormData({ ...formData, billId: '', refundAmount: '' });
-      } else {
-        toast.error('Failed to process refund');
-      }
-    } catch (error) {
-      toast.error('Error processing refund');
+      await dispatch(
+        processRefund({
+          billId: formData.billId,
+          refundAmount: formData.refundAmount,
+          processedBy: user.username,
+          token: access_token,
+        })
+      ).unwrap();
+      toast.success('Refund processed successfully');
+      setFormData({ ...formData, billId: '', refundAmount: '' });
+    } catch (err) {
+      toast.error(`Error processing refund: ${err}`);
     }
   };
 
   const handleClaimSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:5000/bills/claims', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
-        },
-        body: JSON.stringify({
+      await dispatch(
+        submitClaim({
           claimId: formData.claimId,
           insuranceProvider: formData.insuranceProvider,
           claimAmount: formData.claimAmount,
           processedBy: user.username,
-        }),
-      });
-      if (response.ok) {
-        toast.success('Insurance claim submitted successfully');
-        setFormData({ ...formData, claimId: '', insuranceProvider: '', claimAmount: '' });
-      } else {
-        toast.error('Failed to submit claim');
-      }
-    } catch (error) {
-      toast.error('Error submitting claim');
+          token: access_token,
+        })
+      ).unwrap();
+      toast.success('Insurance claim submitted successfully');
+      setFormData({ ...formData, claimId: '', insuranceProvider: '', claimAmount: '' });
+    } catch (err) {
+      toast.error(`Error submitting claim: ${err}`);
     }
   };
 
   return (
     <div className="container mx-auto p-4 animate-fade-in">
       <h2 className="text-2xl font-bold mb-4">Billing Management</h2>
+      {status === 'loading' && <p>Loading...</p>}
+      {error && <p className="text-red-500 mb-4">{error}</p>}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <h3 className="text-xl font-semibold mb-4">Process Refund</h3>
@@ -94,7 +87,9 @@ const BillingManagement = () => {
                 required
               />
             </div>
-            <button type="submit" className="btn-primary">Process Refund</button>
+            <button type="submit" className="btn-primary" disabled={status === 'loading'}>
+              Process Refund
+            </button>
           </form>
         </div>
         <div>
@@ -133,7 +128,9 @@ const BillingManagement = () => {
                 required
               />
             </div>
-            <button type="submit" className="btn-primary">Submit Claim</button>
+            <button type="submit" className="btn-primary" disabled={status === 'loading'}>
+              Submit Claim
+            </button>
           </form>
         </div>
       </div>

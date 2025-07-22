@@ -1,57 +1,39 @@
-import React, { useEffect, useState } from 'react';
-import { useSelector } from 'react-redux';
+import React, { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, NavLink } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { fetchPatients } from '../slices/patientSlice';
+import { fetchAppointments } from '../slices/appointmentSlice';
+import { fetchRecords } from '../slices/recordSlice';
 
 const DoctorPortal = () => {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const [patients, setPatients] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [records, setRecords] = useState([]);
+  const { patients, error: patientError } = useSelector((state) => state.patients);
+  const { appointments, error: appointmentError } = useSelector((state) => state.appointments);
+  const { records, error: recordError } = useSelector((state) => state.records);
 
   useEffect(() => {
     if (user && (user.role === 'Admin' || user.role === 'Doctor')) {
-      // Fetch patients
-      fetch('http://localhost:5000/patients', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setPatients(data.patients);
-          toast.success('Patients Loaded');
-        })
-        .catch((err) => toast.error('Failed to load patients'));
-
-      // Fetch appointments
-      fetch('http://localhost:5000/appointments', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setAppointments(data.appointments);
-          toast.success('Appointments Loaded');
-        })
-        .catch((err) => toast.error('Failed to load appointments'));
-
-      // Fetch records
-      fetch('http://localhost:5000/records', {
-        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          setRecords(data.records);
-          toast.success('Records Loaded');
-        })
-        .catch((err) => toast.error('Failed to load records'));
+      dispatch(fetchPatients(1));
+      dispatch(fetchAppointments(1));
+      dispatch(fetchRecords(1));
     } else {
       navigate('/dashboard');
       toast.error('Unauthorized access');
     }
-  }, [user, navigate]);
+  }, [user, dispatch, navigate]);
+
+  useEffect(() => {
+    if (patientError) toast.error(`Failed to load patients: ${patientError}`);
+    if (appointmentError) toast.error(`Failed to load appointments: ${appointmentError}`);
+    if (recordError) toast.error(`Failed to load records: ${recordError}`);
+  }, [patientError, appointmentError, recordError]);
 
   const handleReviewTest = (recordId) => {
     toast.success(`Review Initiated for Record ${recordId}`);
+    // TODO: Implement backend endpoint POST /records/review
   };
 
   return (

@@ -1,25 +1,38 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import { useDispatch, useSelector } from 'react-redux';
+import toast from 'react-hot-toast';
+import { register } from '../api/api';
+import { login } from '../slices/authSlice';
 
 const Register = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('Doctor');
-  const [error, setError] = useState('');
+  const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { status, error } = useSelector((state) => state.auth);
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    role: 'Patient',
+    email: '',
+  });
+
+  useEffect(() => {
+    if (error) toast.error(`Error: ${error}`);
+  }, [error]);
+
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/register`, {
-        username,
-        password,
-        role,
-      });
-      navigate('/login');
+      const response = await register(formData);
+      await dispatch(login({ ...formData, token: response.data.token, role: response.data.role })).unwrap();
+      toast.success('Registration Successful');
+      navigate('/dashboard');
     } catch (err) {
-      setError('Registration failed');
+      toast.error(`Registration failed: ${err.response?.data?.message || err.message}`);
     }
   };
 
@@ -27,46 +40,85 @@ const Register = () => {
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold mb-6 text-center">Register</h2>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-gray-700">Username</label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="username">
+              Username
+            </label>
             <input
+              id="username"
+              name="username"
               type="text"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              value={formData.username}
+              onChange={handleChange}
               className="w-full p-2 border rounded"
               required
             />
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700">Password</label>
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="email">
+              Email
+            </label>
             <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
               className="w-full p-2 border rounded"
               required
             />
           </div>
-          <div className="mb-4">
-            <label className="block text-gray-700">Role</label>
-            <select
-              value={role}
-              onChange={(e) => setRole(e.target.value)}
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="password">
+              Password
+            </label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
+              onChange={handleChange}
               className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="role">
+              Role
+            </label>
+            <select
+              id="role"
+              name="role"
+              value={formData.role}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
             >
+              <option value="Patient">Patient</option>
               <option value="Doctor">Doctor</option>
               <option value="Nurse">Nurse</option>
               <option value="Admin">Admin</option>
+              <option value="Lab">Lab</option>
+              <option value="Reception">Reception</option>
             </select>
           </div>
-          <button
-            type="submit"
-            className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
-          >
-            Register
-          </button>
+          <div className="flex space-x-4">
+            <button
+              type="submit"
+              className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600"
+              disabled={status === 'loading'}
+            >
+              Register
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/login')}
+              className="w-full bg-gray-500 text-white p-2 rounded hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       </div>
     </div>

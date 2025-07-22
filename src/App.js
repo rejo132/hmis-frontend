@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, NavLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout } from './slices/authSlice';
+import { logout, loadTokenFromStorage } from './slices/authSlice';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -38,6 +38,11 @@ const App = () => {
   const { user, status } = useSelector((state) => state.auth || {});
   console.log('App.js: user=', user, 'authStatus=', status);
 
+  // Load token from localStorage on app startup
+  useEffect(() => {
+    dispatch(loadTokenFromStorage());
+  }, [dispatch]);
+
   const roleColor = user?.role === 'Doctor' ? 'bg-blue-600' : 
                    user?.role === 'Nurse' ? 'bg-green-600' : 
                    user?.role === 'Admin' ? 'bg-gray-600' : 
@@ -50,21 +55,55 @@ const App = () => {
                    user?.role === 'Accountant' ? 'bg-pink-600' : 'bg-gray-200';
 
   const handleLogout = () => {
-    dispatch(logout());
-    localStorage.removeItem('token');
+    dispatch(logout()); // This now handles localStorage cleanup automatically
+  };
+
+  // Default redirect path when user is undefined or role is unknown
+  const getRedirectPath = () => {
+    if (!user || !user.role) return '/dashboard';
+    switch (user.role) {
+      case 'Admin':
+        return '/dashboard';
+      case 'Patient':
+        return '/patient-portal';
+      case 'Doctor':
+        return '/doctor-portal';
+      case 'Nurse':
+        return '/vitals';
+      case 'Lab':
+        return '/lab-orders';
+      case 'Receptionist':
+        return '/reception';
+      case 'Billing':
+        return '/billing';
+      case 'IT':
+        return '/users/roles';
+      case 'Accountant':
+        return '/finance';
+      case 'Pharmacist':
+        return '/inventory';
+      default:
+        return '/dashboard';
+    }
   };
 
   return (
     <ErrorBoundary>
       <Router>
         <div className="flex min-h-screen flex-col">
+          {/* Loading Indicator */}
+          {status === 'loading' && (
+            <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+            </div>
+          )}
           {/* Sticky Header */}
           {status === 'succeeded' && user && (
             <header className={`sticky top-0 z-20 ${roleColor} text-white p-4 shadow-md`}>
               <div className="container mx-auto flex justify-between items-center">
                 <h1 className="text-xl font-bold">HMIS</h1>
                 <div className="flex items-center space-x-4">
-                  <span className="text-sm">{user.username} ({user.role})</span>
+                  <span className="text-sm">{user.username || 'User'} ({user.role || 'Unknown'})</span>
                   <button onClick={handleLogout} className="btn-secondary text-sm">
                     <svg className="w-5 h-5 mr-1 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h3a3 3 0 013 3v1"></path>
@@ -194,7 +233,7 @@ const App = () => {
                 {(user?.role === 'Admin' || user?.role === 'Accountant') && (
                   <li>
                     <NavLink to="/finance" className={({ isActive }) => `flex items-center py-2 px-3 rounded-md hover:bg-opacity-80 transition-colors ${isActive ? 'bg-white bg-opacity-20' : ''}`}>
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 23" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z"></path>
                       </svg>
                       Finance
@@ -331,7 +370,15 @@ const App = () => {
               <Routes>
                 <Route
                   path="/"
-                  element={status === 'succeeded' && user ? <Navigate to="/dashboard" /> : <Login />}
+                  element={
+                    status === 'loading' ? (
+                      <div>Loading...</div>
+                    ) : status === 'succeeded' && user ? (
+                      <Navigate to={getRedirectPath()} />
+                    ) : (
+                      <Login />
+                    )
+                  }
                 />
                 <Route
                   path="/dashboard"
