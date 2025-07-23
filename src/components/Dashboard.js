@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { NavLink } from 'react-router-dom';
 import PatientTimeline from './PatientTimeline';
+import DataVisualization from './DataVisualization';
 import { fetchPatients } from '../slices/patientSlice';
 import { fetchAppointments } from '../slices/appointmentSlice';
 import { fetchRecords } from '../slices/recordSlice';
@@ -220,6 +221,34 @@ const Dashboard = () => {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Data Visualization Charts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <DataVisualization 
+              type="appointments" 
+              title="Appointments Trend" 
+              subtitle="Last 30 days"
+              trend="up"
+            />
+            <DataVisualization 
+              type="revenue" 
+              title="Revenue Growth" 
+              subtitle="Monthly progress"
+              trend="up"
+            />
+            <DataVisualization 
+              type="beds" 
+              title="Bed Occupancy" 
+              subtitle="Utilization rate"
+              trend="stable"
+            />
+            <DataVisualization 
+              type="patients" 
+              title="Patient Volume" 
+              subtitle="Daily admissions"
+              trend="up"
+            />
           </div>
 
           {/* Additional Metrics Row */}

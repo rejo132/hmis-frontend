@@ -5,6 +5,8 @@ import { logout, loadTokenFromStorage } from './slices/authSlice';
 import DarkModeToggle from './components/DarkModeToggle';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import GlobalSearch from './components/GlobalSearch';
+import NotificationCenter from './components/NotificationCenter';
+import UserProfileDropdown from './components/UserProfileDropdown';
 import ErrorBoundary from './components/ErrorBoundary';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard';
@@ -67,9 +69,10 @@ const App = () => {
                    user?.role === 'IT' ? 'bg-gradient-to-r from-orange-600 to-orange-700' :
                    user?.role === 'Accountant' ? 'bg-gradient-to-r from-pink-600 to-pink-700' : 'bg-gradient-to-r from-gray-400 to-gray-500';
 
-  const handleLogout = () => {
-    dispatch(logout()); // This now handles localStorage cleanup automatically
-  };
+  // handleLogout is now handled by UserProfileDropdown component
+  // const handleLogout = () => {
+  //   dispatch(logout()); // This now handles localStorage cleanup automatically
+  // };
 
   // Default redirect path when user is undefined or role is unknown
   const getRedirectPath = () => {
@@ -148,12 +151,8 @@ const App = () => {
                       </svg>
                     </div>
                   </div>
-                  <button onClick={handleLogout} className="flex items-center space-x-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl transition-all duration-200 backdrop-blur-md">
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h3a3 3 0 013 3v1" />
-                    </svg>
-                    <span className="text-sm font-medium">Logout</span>
-                  </button>
+                  <NotificationCenter />
+                  <UserProfileDropdown />
                 </div>
               </div>
             </header>

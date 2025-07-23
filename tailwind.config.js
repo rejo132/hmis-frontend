@@ -98,6 +98,19 @@ module.exports = {
           800: '#991b1b',
           900: '#7f1d1d',
         },
+        // Enhanced accessibility colors with high contrast ratios (WCAG AA/AAA compliant)
+        accessible: {
+          'high-contrast': '#000000',
+          'low-contrast': '#ffffff',
+          'focus-ring': '#005fcc',
+          'error-text': '#d92d20',
+          'success-text': '#027a48',
+          'warning-text': '#b54708',
+          'info-text': '#1570ef',
+          'border-focus': '#4285f4',
+          'text-primary': '#1f2937',
+          'text-secondary': '#4b5563',
+        },
       },
       boxShadow: {
         'glass': '0 8px 32px 0 rgba(31, 38, 135, 0.37)',
