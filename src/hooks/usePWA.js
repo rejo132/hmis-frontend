@@ -10,15 +10,15 @@ export const usePWA = () => {
     // Register/unregister service worker based on environment
     if ('serviceWorker' in navigator) {
       if (process.env.NODE_ENV === 'production') {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((registration) => {
-              console.log('SW registered: ', registration);
-            })
-            .catch((registrationError) => {
-              console.log('SW registration failed: ', registrationError);
-            });
-        });
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then((registration) => {
+            console.log('SW registered: ', registration);
+          })
+          .catch((registrationError) => {
+            console.log('SW registration failed: ', registrationError);
+          });
+      });
       } else {
         // In development, unregister any existing service worker
         navigator.serviceWorker.getRegistrations().then((registrations) => {

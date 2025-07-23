@@ -40,7 +40,7 @@ const Login = () => {
         navigate('/doctor-portal');
       } else if (role === 'Nurse') {
         navigate('/vitals');
-      } else if (role === 'Lab') {
+      } else if (role === 'Lab Tech') {
         navigate('/lab-orders');
       } else if (role === 'Receptionist') {
         navigate('/reception');
@@ -74,7 +74,7 @@ const Login = () => {
         navigate('/doctor-portal');
       } else if (role === 'Nurse') {
         navigate('/vitals');
-      } else if (role === 'Lab') {
+      } else if (role === 'Lab Tech') {
         navigate('/lab-orders');
       } else if (role === 'Receptionist') {
         navigate('/reception');
