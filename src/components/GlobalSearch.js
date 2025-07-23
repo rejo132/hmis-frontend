@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 // import { useNavigate } from 'react-router-dom'; // For future use
 
@@ -92,7 +92,7 @@ const GlobalSearch = () => {
       setResults([]);
       setIsOpen(false);
     }
-  }, [query, patients, appointments, records]);
+  }, [query, patients, appointments, records, performSearch]);
 
   const handleResultClick = (result) => {
     setQuery('');

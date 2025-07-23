@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, NavLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout, loadTokenFromStorage } from './slices/authSlice';
+import { loadTokenFromStorage } from './slices/authSlice';
 import DarkModeToggle from './components/DarkModeToggle';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import GlobalSearch from './components/GlobalSearch';
