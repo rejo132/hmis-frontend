@@ -25,7 +25,7 @@ const GlobalSearch = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const performSearch = (searchQuery) => {
+  const performSearch = useCallback((searchQuery) => {
     const searchTerm = searchQuery.toLowerCase();
     let allResults = [];
 
@@ -79,7 +79,7 @@ const GlobalSearch = () => {
 
     allResults = [...patientResults, ...appointmentResults, ...recordResults];
     return allResults.slice(0, 10); // Limit to 10 results
-  };
+  }, [patients, appointments, records]);
 
   useEffect(() => {
     if (query.length > 2) {
