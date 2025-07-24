@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import toast from 'react-hot-toast';
-import { register } from '../api/api';
+import { registerAPI } from '../api/api';
 import { login } from '../slices/authSlice';
 
 const Register = () => {
@@ -27,7 +27,7 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await register(formData);
+      const response = await registerAPI(formData);
       await dispatch(login({ ...formData, token: response.data.token, role: response.data.role })).unwrap();
       toast.success('Registration Successful');
       navigate('/dashboard');
@@ -39,7 +39,7 @@ const Register = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-100">
       <div className="bg-white p-8 rounded shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-center">Register</h2>
+        <h2 className="text-2xl font-bold mb-4 text-center text-gray-900 dark:text-white">Register</h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-gray-700 text-sm font-medium" htmlFor="username">

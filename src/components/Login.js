@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 import Register from './Register';
 import { Typewriter } from 'react-simple-typewriter';
 
-// LiveClock component
+// Live Clock component
 const LiveClock = () => {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -22,33 +22,24 @@ const LiveClock = () => {
   return (
     <div className="text-right text-xs text-white/80 font-mono mb-2 select-none">
       <span>{date} </span>
-      <span>
-        {hours}
-        <span className="animate-blink">:</span>
-        {minutes}
-        <span className="animate-blink">:</span>
-        {seconds}
-      </span>
+      <span className="animate-blink">{hours}:{minutes}</span>
+      <span>:{seconds}</span>
     </div>
   );
 };
 
-// Add animated gradient CSS
-const animatedGradientStyle = {
-  background: 'linear-gradient(270deg, #1e3a8a, #2563eb, #9333ea, #f59e42, #1e3a8a)',
-  backgroundSize: '1200% 1200%',
-  animation: 'gradientMove 16s ease infinite',
-};
-
-// Role selector data
-const roles = [
-  { key: 'Admin', label: 'Admin', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c1.657 0 3-1.343 3-3S13.657 5 12 5s-3 1.343-3 3 1.343 3 3 3zm0 2c-2.67 0-8 1.337-8 4v2h16v-2c0-2.663-5.33-4-8-4z" /></svg> },
-  { key: 'Doctor', label: 'Doctor', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 7a4 4 0 118 0v4a4 4 0 11-8 0V7zm8 8a4 4 0 01-8 0" /></svg> },
-  { key: 'Nurse', label: 'Nurse', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5zm0 7v-7" /></svg> },
-  { key: 'Lab Tech', label: 'Lab', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17v-2a4 4 0 018 0v2M5 21h14a2 2 0 002-2v-7a2 2 0 00-2-2h-2a2 2 0 00-2-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2v2a2 2 0 00-2 2H5a2 2 0 00-2 2v7a2 2 0 002 2z" /></svg> },
-  { key: 'Receptionist', label: 'Reception', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg> },
-  { key: 'Patient', label: 'Patient', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M6 20v-2a4 4 0 018 0v2" /></svg> },
-  { key: 'Billing', label: 'Billing', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" /></svg> },
+// Role selector pills/icons
+const ROLES = [
+  { label: 'Admin', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 11c0 1.104-.896 2-2 2s-2-.896-2-2 2-4 2-4 2 .896 2 2zm0 0c0 1.104-.896 2-2 2s-2-.896-2-2 2-4 2-4 2 .896 2 2zm0 0c0 1.104-.896 2-2 2s-2-.896-2-2 2-4 2-4 2 .896 2 2z"/></svg> },
+  { label: 'Nurse', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5zm0 7v-7"/></svg> },
+  { label: 'Lab Tech', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V7"/></svg> },
+  { label: 'Doctor', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 14l9-5-9-5-9 5 9 5zm0 7v-7"/></svg> },
+  { label: 'Patient', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M5.5 21a7.5 7.5 0 0113 0"/></svg> },
+  { label: 'Receptionist', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 17v-1a4 4 0 014-4h0a4 4 0 014 4v1"/></svg> },
+  { label: 'Billing', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg> },
+  { label: 'IT', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg> },
+  { label: 'Accountant', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg> },
+  { label: 'Pharmacist', icon: <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><rect width="20" height="14" x="2" y="5" rx="2"/><path d="M2 10h20"/></svg> },
 ];
 
 const Login = () => {
@@ -59,12 +50,12 @@ const Login = () => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
-    role: 'Admin', // Default role for login
   });
 
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
+  const [selectedRole, setSelectedRole] = useState('');
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -141,16 +132,7 @@ const Login = () => {
   }, [user, navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden" style={animatedGradientStyle}>
-      <style>{`
-        @keyframes gradientMove {
-          0% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
-          100% { background-position: 0% 50%; }
-        }
-        .animate-blink { animation: blink 1s steps(2, start) infinite; }
-        @keyframes blink { to { visibility: hidden; } }
-      `}</style>
+    <div className="min-h-screen animated-gradient-bg flex items-center justify-center relative overflow-hidden">
       {/* Background Elements */}
       <div className="absolute inset-0">
         {/* Gradient Orbs */}
@@ -160,35 +142,75 @@ const Login = () => {
         {/* Grid Pattern */}
         <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
       </div>
+      <style>{`
+        .animated-gradient-bg {
+          background: linear-gradient(270deg, #1e3a8a, #2563eb, #9333ea, #f59e42, #1e3a8a);
+          background-size: 1200% 1200%;
+          animation: gradientMove 16s ease infinite;
+        }
+        @keyframes gradientMove {
+          0% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
+          100% { background-position: 0% 50%; }
+        }
+        .animate-blink { animation: blink 1s steps(2, start) infinite; }
+        @keyframes blink { to { visibility: hidden; } }
+      `}</style>
       {/* Main Content: Responsive Two-Column Layout */}
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 flex flex-col lg:flex-row items-center justify-center gap-12">
-        {/* Left Side - Branding & Welcome + Hero Animation */}
+        {/* Left Side - Branding, Welcome, Hero Animation */}
         <div className="flex-1 text-center lg:text-left space-y-8 mb-10 lg:mb-0 flex flex-col items-center lg:items-start">
-          {/* Hero SVG Animation */}
-          <div className="mb-2">
-            {/* Example: animated heartbeat SVG */}
-            <svg width="80" height="40" viewBox="0 0 80 40" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <polyline points="0,20 10,20 15,10 25,30 35,5 45,35 55,15 65,25 70,20 80,20" stroke="#fff" strokeWidth="3" fill="none">
-                <animate attributeName="points" dur="2s" repeatCount="indefinite"
-                  values="0,20 10,20 15,10 25,30 35,5 45,35 55,15 65,25 70,20 80,20;
-                          0,20 10,20 15,30 25,10 35,35 45,5 55,25 65,15 70,20 80,20;
-                          0,20 10,20 15,10 25,30 35,5 45,35 55,15 65,25 70,20 80,20" />
-              </polyline>
-            </svg>
+          <div className="flex flex-col items-center lg:items-start space-y-2">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-full flex items-center justify-center shadow-lg">
+                {/* Padlock icon for security */}
+                <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 17a2 2 0 002-2v-2a2 2 0 00-4 0v2a2 2 0 002 2zm6-6V9a6 6 0 10-12 0v2a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2z" />
+                  </svg>
+                {/* MediCure logo/name */}
+              </div>
+              <span className="text-3xl font-bold text-white tracking-wide">MediCure</span>
+            </div>
+            <span className="text-green-200 text-xs flex items-center space-x-1 mt-1">
+              <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 17a2 2 0 002-2v-2a2 2 0 00-4 0v2a2 2 0 002 2zm6-6V9a6 6 0 10-12 0v2a2 2 0 00-2 2v7a2 2 0 002 2h12a2 2 0 002-2v-7a2 2 0 00-2-2z" /></svg>
+              <span>Your data is secure</span>
+                </span>
           </div>
-          {/* Typing Effect Welcome */}
+          {/* Typing effect for welcome message */}
           <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight mt-4">
             <Typewriter words={["Welcome to MediCure"]} loop={false} cursor cursorStyle="_" typeSpeed={70} deleteSpeed={50} delaySpeed={1000} />
           </h1>
+          {/* Hero Animation (SVG or Lottie) */}
+          <div className="w-48 h-48 mx-auto lg:mx-0">
+            {/* Example: animated heartbeat SVG */}
+            <svg viewBox="0 0 200 100" className="w-full h-full">
+              <polyline points="0,60 40,60 50,20 70,80 90,40 110,80 130,20 150,60 200,60" fill="none" stroke="#fff" strokeWidth="4" strokeDasharray="8" >
+                <animate attributeName="stroke-dashoffset" values="16;0;16" dur="2s" repeatCount="indefinite" />
+              </polyline>
+            </svg>
+          </div>
           <p className="text-lg text-white/80 max-w-lg mx-auto lg:mx-0">
-            Advanced healthcare management platform designed to streamline hospital operations and enhance patient care.
-          </p>
-        </div>
-        {/* Right Side - Login/Register Card */}
+                Advanced healthcare management platform designed to streamline hospital operations and enhance patient care.
+              </p>
+            </div>
+        {/* Right Side - Card with Live Clock, Role Selector, Login/Register Tabs */}
         <div className="flex-1 flex flex-col justify-center items-center w-full max-w-md mx-auto">
-          {/* Live Clock */}
           <LiveClock />
           <div className="glass-card p-8 space-y-6 shadow-2xl rounded-2xl border border-white/20 backdrop-blur-lg bg-white/20 dark:bg-gray-900/30 w-full">
+            {/* Role Selector */}
+            <div className="flex flex-wrap justify-center gap-2 mb-4">
+              {ROLES.map(role => (
+                <button
+                  key={role.label}
+                  type="button"
+                  className={`flex items-center px-3 py-1 rounded-full border transition-all text-xs font-semibold ${selectedRole === role.label ? 'bg-primary-600 text-white shadow' : 'bg-white/30 text-primary-700 border-primary-200 hover:bg-primary-100'}`}
+                  onClick={() => setSelectedRole(role.label)}
+                >
+                  {role.icon}
+                  <span className="ml-1">{role.label}</span>
+                </button>
+              ))}
+            </div>
             {/* Tabs for Login/Register */}
             <div className="flex justify-center mb-6">
               <button
@@ -204,22 +226,6 @@ const Login = () => {
                 Register
               </button>
             </div>
-            {/* Role Selector (only for login) */}
-            {!showRegister && (
-              <div className="flex flex-wrap justify-center gap-2 mb-4">
-                {roles.map((role) => (
-                  <button
-                    key={role.key}
-                    type="button"
-                    className={`flex items-center space-x-1 px-3 py-1 rounded-full border transition-all text-xs font-semibold ${formData.role === role.key ? 'bg-primary-600 text-white border-primary-700 shadow' : 'bg-white/30 text-primary-700 border-primary-200 hover:bg-primary-100'}`}
-                    onClick={() => setFormData({ ...formData, role: role.key })}
-                  >
-                    {role.icon}
-                    <span>{role.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
             {/* Login Form */}
             {!showRegister && (
               <>
@@ -228,6 +234,7 @@ const Login = () => {
                   <p className="text-gray-600 dark:text-gray-400">Sign in to continue to your dashboard</p>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {selectedRole && <input type="hidden" name="role" value={selectedRole} />}
                   {/* Username Field */}
                   <div className="space-y-2">
                     <label htmlFor="username" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center space-x-1">
@@ -353,12 +360,8 @@ const Login = () => {
                 </details>
               </>
             )}
-            {/* Register Form - styled like login card */}
-            {showRegister && (
-              <div className="w-full">
-                <Register />
-              </div>
-            )}
+            {/* Register Form - styled to match login card */}
+            {showRegister && <div className="w-full"><Register /></div>}
           </div>
         </div>
       </div>
