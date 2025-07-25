@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+const API_BASE = 'http://localhost:5000';
+
 const api = axios.create({
   baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
   headers: {
@@ -41,10 +43,10 @@ export const loginAPI = (credentials) => api.post('/api/login', credentials);
 export const registerAPI = (data) => api.post('/api/register', data);
 export const getPatients = (page = 1) => api.get(`/api/patients`, { params: { page } });
 export const getPatient = (id) => api.get(`/api/patients/${id}`);
-export const createPatient = (data) => api.post('/api/patients', data);
+export const createPatient = (data) => api.post(`${API_BASE}/api/patients`, data);
 export const updatePatient = (id, data) => api.put(`/api/patients/${id}`, data);
 export const getAppointments = (page = 1) => api.get(`/api/appointments`, { params: { page } });
-export const createAppointment = (data) => api.post('/api/appointments', data);
+export const createAppointment = (data) => api.post(`${API_BASE}/api/appointments`, data);
 export const getRecords = (page = 1) => api.get(`/api/records`, { params: { page } });
 export const createMedicalRecord = (data) => api.post('/api/records', data);
 export const getBills = (page = 1) => api.get(`/api/bills`, { params: { page } });

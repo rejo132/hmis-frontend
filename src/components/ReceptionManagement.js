@@ -42,7 +42,8 @@ const ReceptionManagement = () => {
     async function fetchQueue() {
       try {
         const token = localStorage.getItem('access_token');
-        const res = await axios.get('/api/queue', { headers: { Authorization: `Bearer ${token}` } });
+        const API_BASE = 'http://localhost:5000';
+        const res = await axios.get(`${API_BASE}/api/queue`, { headers: { Authorization: `Bearer ${token}` } });
         setQueue(res.data.queue);
       } catch (err) {
         // handle error
@@ -55,7 +56,8 @@ const ReceptionManagement = () => {
     async function fetchDoctors() {
       try {
         const token = localStorage.getItem('access_token');
-        const res = await axios.get('/api/employees', { headers: { Authorization: `Bearer ${token}` } });
+        const API_BASE = 'http://localhost:5000';
+        const res = await axios.get(`${API_BASE}/api/employees`, { headers: { Authorization: `Bearer ${token}` } });
         setDoctors(res.data.employees.filter(e => e.role === 'Doctor'));
       } catch (err) {}
     }
@@ -79,7 +81,8 @@ const ReceptionManagement = () => {
       })).unwrap();
       // Add to queue
       const token = localStorage.getItem('access_token');
-      await axios.post('/api/queue', { patient_id: formData.patientId, name: formData.name }, { headers: { Authorization: `Bearer ${token}` } });
+      const API_BASE = 'http://localhost:5000';
+      await axios.post(`${API_BASE}/api/queue`, { patient_id: formData.patientId, name: formData.name }, { headers: { Authorization: `Bearer ${token}` } });
       toast.success('Patient registered and added to queue');
       setFormData({ ...formData, patientId: '', name: '', dob: '', gender: '' });
     } catch (err) {
@@ -108,7 +111,8 @@ const ReceptionManagement = () => {
     setCheckedIn((prev) => ({ ...prev, [patientId]: true }));
     try {
       const token = localStorage.getItem('access_token');
-      await axios.post('/api/checkin', { patient_id: patientId }, { headers: { Authorization: `Bearer ${token}` } });
+      const API_BASE = 'http://localhost:5000';
+      await axios.post(`${API_BASE}/api/checkin`, { patient_id: patientId }, { headers: { Authorization: `Bearer ${token}` } });
     } catch (err) {}
   };
 
@@ -116,7 +120,8 @@ const ReceptionManagement = () => {
     setCheckedIn((prev) => ({ ...prev, [patientId]: false }));
     try {
       const token = localStorage.getItem('access_token');
-      await axios.post('/api/checkout', { patient_id: patientId }, { headers: { Authorization: `Bearer ${token}` } });
+      const API_BASE = 'http://localhost:5000';
+      await axios.post(`${API_BASE}/api/checkout`, { patient_id: patientId }, { headers: { Authorization: `Bearer ${token}` } });
     } catch (err) {}
   };
 
