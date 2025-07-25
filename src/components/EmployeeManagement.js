@@ -11,6 +11,7 @@ const EmployeeManagement = () => {
   const { employees, status, error } = useSelector((state) => state.employees);
   const [formData, setFormData] = useState({
     name: '',
+    password: '',
     role: 'Doctor',
     schedule: '',
     salary: '',
@@ -39,9 +40,14 @@ const EmployeeManagement = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await dispatch(addEmployee(formData)).unwrap();
+      const payload = {
+        username: formData.name,
+        password: formData.password,
+        role: formData.role,
+      };
+      await dispatch(addEmployee(payload)).unwrap();
       toast.success('Employee Added');
-      setFormData({ name: '', role: 'Doctor', schedule: '', salary: '' });
+      setFormData({ name: '', password: '', role: 'Doctor', schedule: '', salary: '' });
     } catch (err) {
       toast.error(`Failed to add employee: ${err}`);
     }
@@ -62,6 +68,18 @@ const EmployeeManagement = () => {
               name="name"
               type="text"
               value={formData.name}
+              onChange={handleChange}
+              className="w-full p-2 border rounded"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-gray-700 text-sm font-medium" htmlFor="password">Password</label>
+            <input
+              id="password"
+              name="password"
+              type="password"
+              value={formData.password}
               onChange={handleChange}
               className="w-full p-2 border rounded"
               required

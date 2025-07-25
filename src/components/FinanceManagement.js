@@ -12,6 +12,8 @@ const FinanceManagement = () => {
     amount: '',
     date: '',
   });
+  const [selectedUser, setSelectedUser] = useState('');
+  const [users, setUsers] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -32,6 +34,15 @@ const FinanceManagement = () => {
     if (error) toast.error(`Error: ${error}`);
   }, [error]);
 
+  useEffect(() => {
+    // Fetch users for dropdown (mock or real API)
+    setUsers([
+      { id: 1, username: 'admin' },
+      { id: 2, username: 'doctor1' },
+      { id: 3, username: 'nurse1' },
+    ]);
+  }, []);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -39,9 +50,10 @@ const FinanceManagement = () => {
   const handleExpenseSubmit = async (e) => {
     e.preventDefault();
     try {
-      await dispatch(addExpense({ ...formData, recordedBy: user.username })).unwrap();
+      await dispatch(addExpense({ user_id: selectedUser, amount: formData.amount })).unwrap();
       toast.success('Expense recorded successfully');
       setFormData({ description: '', amount: '', date: '' });
+      setSelectedUser('');
     } catch (err) {
       toast.error(`Error recording expense: ${err}`);
     }
@@ -86,6 +98,13 @@ const FinanceManagement = () => {
                 className="mt-1 p-2 block w-full border rounded-md"
                 required
               />
+            </div>
+            <div>
+              <label>User</label>
+              <select value={selectedUser} onChange={e => setSelectedUser(e.target.value)} required className="w-full border p-2 rounded">
+                <option value="">Select User</option>
+                {users.map(u => <option key={u.id} value={u.id}>{u.username}</option>)}
+              </select>
             </div>
             <button type="submit" className="btn-primary" disabled={status === 'loading'}>
               Record Expense
