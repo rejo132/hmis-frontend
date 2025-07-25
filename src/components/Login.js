@@ -178,7 +178,7 @@ const Login = () => {
           </div>
           {/* Typing effect for welcome message */}
           <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight mt-4">
-            <Typewriter words={["Welcome to MediCure"]} loop={false} cursor cursorStyle="_" typeSpeed={70} deleteSpeed={50} delaySpeed={1000} />
+            Welcome to MediCure
           </h1>
           {/* Hero Animation (SVG or Lottie) */}
           <div className="w-48 h-48 mx-auto lg:mx-0">
