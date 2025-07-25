@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { login } from '../slices/authSlice';
 import toast from 'react-hot-toast';
 import Register from './Register';
-import { Typewriter } from 'react-simple-typewriter';
+
 
 // Live Clock component
 const LiveClock = () => {
