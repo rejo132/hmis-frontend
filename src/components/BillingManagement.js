@@ -1,12 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import { processRefund, submitClaim } from '../slices/billingSlice';
+import axios from 'axios';
 
 const BillingManagement = () => {
   const dispatch = useDispatch();
   const { user, access_token } = useSelector((state) => state.auth);
   const { status, error } = useSelector((state) => state.billing || {});
+  const [patients, setPatients] = useState([]);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientServices, setPatientServices] = useState([]);
+  const [generatedInvoice, setGeneratedInvoice] = useState(null);
   const [formData, setFormData] = useState({
     billId: '',
     refundAmount: '',
@@ -15,6 +20,144 @@ const BillingManagement = () => {
     claimAmount: '',
   });
   const [report, setReport] = useState(null);
+
+  useEffect(() => {
+    fetchPatients();
+  }, []);
+
+  const fetchPatients = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const API_BASE = 'http://localhost:5000';
+      const res = await axios.get(`${API_BASE}/api/patients`, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
+      setPatients(res.data.patients || []);
+    } catch (err) {
+      toast.error('Failed to fetch patients');
+    }
+  };
+
+  const fetchPatientServices = async (patientId) => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const API_BASE = 'http://localhost:5000';
+      
+      // Fetch appointments, records, and lab orders for the patient
+      const [appointmentsRes, recordsRes, labOrdersRes] = await Promise.all([
+        axios.get(`${API_BASE}/api/appointments`, { 
+          headers: { Authorization: `Bearer ${token}` },
+          params: { patient_id: patientId }
+        }),
+        axios.get(`${API_BASE}/api/records`, { 
+          headers: { Authorization: `Bearer ${token}` },
+          params: { patient_id: patientId }
+        }),
+        axios.get(`${API_BASE}/api/lab-orders`, { 
+          headers: { Authorization: `Bearer ${token}` },
+          params: { patient_id: patientId }
+        })
+      ]);
+
+      const services = [];
+      
+      // Add appointments
+      (appointmentsRes.data.appointments || []).forEach(appt => {
+        services.push({
+          id: `appt_${appt.id}`,
+          type: 'Consultation',
+          description: `Doctor consultation on ${appt.appointment_time}`,
+          amount: 5000, // Mock amount
+          date: appt.appointment_time,
+          status: 'Completed'
+        });
+      });
+
+      // Add lab tests
+      (labOrdersRes.data.lab_orders || []).forEach(lab => {
+        services.push({
+          id: `lab_${lab.id}`,
+          type: 'Laboratory',
+          description: `${lab.test_type}`,
+          amount: 3000, // Mock amount
+          date: lab.created_at,
+          status: lab.status
+        });
+      });
+
+      // Add prescriptions
+      (recordsRes.data.records || []).forEach(record => {
+        if (record.prescription) {
+          services.push({
+            id: `presc_${record.id}`,
+            type: 'Pharmacy',
+            description: `Medication: ${record.prescription}`,
+            amount: 2000, // Mock amount
+            date: record.created_at,
+            status: 'Prescribed'
+          });
+        }
+      });
+
+      setPatientServices(services);
+    } catch (err) {
+      toast.error('Failed to fetch patient services');
+    }
+  };
+
+  const handlePatientSelect = (patient) => {
+    setSelectedPatient(patient);
+    fetchPatientServices(patient.id);
+    setGeneratedInvoice(null);
+  };
+
+  const handleGenerateInvoice = () => {
+    if (patientServices.length === 0) {
+      toast.error('No services found for this patient');
+      return;
+    }
+
+    const totalAmount = patientServices.reduce((sum, service) => sum + service.amount, 0);
+    const invoice = {
+      patientId: selectedPatient.id,
+      patientName: selectedPatient.name,
+      services: patientServices,
+      totalAmount,
+      invoiceNumber: `INV-${Date.now()}`,
+      generatedDate: new Date().toISOString(),
+      status: 'Pending'
+    };
+
+    setGeneratedInvoice(invoice);
+    toast.success('Invoice generated successfully');
+  };
+
+  const handleAcceptPayment = async (paymentMethod) => {
+    if (!generatedInvoice) {
+      toast.error('No invoice to process payment for');
+      return;
+    }
+
+    try {
+      const token = localStorage.getItem('access_token');
+      const API_BASE = 'http://localhost:5000';
+      
+      // Create bill record
+      await axios.post(`${API_BASE}/api/bills`, {
+        patient_id: generatedInvoice.patientId,
+        amount: generatedInvoice.totalAmount,
+        description: `Invoice ${generatedInvoice.invoiceNumber} - ${generatedInvoice.services.length} services`,
+        payment_status: 'Paid',
+        payment_method: paymentMethod,
+        processed_by: user.username
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      setGeneratedInvoice(prev => ({ ...prev, status: 'Paid' }));
+      toast.success(`Payment accepted via ${paymentMethod}`);
+    } catch (err) {
+      toast.error('Failed to process payment');
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -68,90 +211,207 @@ const BillingManagement = () => {
 
   return (
     <div className="container mx-auto p-4 animate-fade-in">
-      <h2 className="text-2xl font-bold mb-4">Billing Management</h2>
-      {status === 'loading' && <p>Loading...</p>}
-      {error && <p className="text-red-500 mb-4">{error}</p>}
-      <div className="mb-8">
-        <button className="btn-primary" onClick={handleGenerateReport}>Generate Billing Report</button>
-        {report && (
-          <div className="mt-4 p-4 border rounded bg-gray-50">
-            <div>Total Income: KES {report.totalIncome}</div>
-            <div>Pending Payments: KES {report.pendingPayments}</div>
-            <div>Insurance Claims: KES {report.insuranceClaims}</div>
-          </div>
-        )}
+      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <span className="text-lg font-bold text-blue-700 mr-4">Role: Billing Officer</span>
+        <span className="text-gray-700">Access patient service log, auto-generate invoice, accept payment, and mark invoice as paid.</span>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+      
+      <h2 className="text-2xl font-bold mb-4">Billing Management</h2>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Patient Selection */}
         <div>
-          <h3 className="text-xl font-semibold mb-4">Process Refund</h3>
-          <form onSubmit={handleRefundSubmit} className="space-y-4 max-w-lg">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Bill ID</label>
-              <input
-                type="text"
-                name="billId"
-                value={formData.billId}
-                onChange={handleChange}
-                className="mt-1 p-2 block w-full border rounded-md"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Refund Amount</label>
-              <input
-                type="number"
-                name="refundAmount"
-                value={formData.refundAmount}
-                onChange={handleChange}
-                className="mt-1 p-2 block w-full border rounded-md"
-                required
-              />
-            </div>
-            <button type="submit" className="btn-primary" disabled={status === 'loading'}>
-              Process Refund
-            </button>
-          </form>
+          <h3 className="text-xl font-semibold mb-4">Patient Service Log</h3>
+          <div className="bg-white border rounded-lg p-4 max-h-96 overflow-y-auto">
+            {patients.length === 0 ? (
+              <p className="text-gray-500">No patients available.</p>
+            ) : (
+              <div className="space-y-3">
+                {patients.map((patient) => (
+                  <div 
+                    key={patient.id}
+                    className={`p-3 border rounded cursor-pointer transition-colors ${
+                      selectedPatient?.id === patient.id 
+                        ? 'bg-blue-100 border-blue-300' 
+                        : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => handlePatientSelect(patient)}
+                  >
+                    <div className="font-medium">{patient.name}</div>
+                    <div className="text-sm text-gray-600">ID: {patient.id}</div>
+                    <div className="text-sm text-gray-500">Contact: {patient.contact || 'N/A'}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Service Log and Invoice */}
         <div>
-          <h3 className="text-xl font-semibold mb-4">Submit Insurance Claim</h3>
-          <form onSubmit={handleClaimSubmit} className="space-y-4 max-w-lg">
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Claim ID</label>
-              <input
-                type="text"
-                name="claimId"
-                value={formData.claimId}
-                onChange={handleChange}
-                className="mt-1 p-2 block w-full border rounded-md"
-                required
-              />
+          <h3 className="text-xl font-semibold mb-4">Service Log & Invoice</h3>
+          {selectedPatient && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
+              <strong>Selected Patient:</strong> {selectedPatient.name} (ID: {selectedPatient.id})
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Insurance Provider</label>
-              <input
-                type="text"
-                name="insuranceProvider"
-                value={formData.insuranceProvider}
-                onChange={handleChange}
-                className="mt-1 p-2 block w-full border rounded-md"
-                required
-              />
+          )}
+          
+          {patientServices.length > 0 && (
+            <div className="bg-white border rounded-lg p-4 mb-4">
+              <h4 className="font-semibold mb-2">Services Rendered</h4>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {patientServices.map((service) => (
+                  <div key={service.id} className="p-2 border rounded text-sm">
+                    <div className="font-medium">{service.type}: {service.description}</div>
+                    <div className="text-gray-600">Amount: KES {service.amount.toLocaleString()}</div>
+                    <div className="text-gray-500">Date: {service.date}</div>
+                    <div className="text-gray-500">Status: {service.status}</div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 pt-2 border-t">
+                <strong>Total Services: {patientServices.length}</strong>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700">Claim Amount</label>
-              <input
-                type="number"
-                name="claimAmount"
-                value={formData.claimAmount}
-                onChange={handleChange}
-                className="mt-1 p-2 block w-full border rounded-md"
-                required
-              />
+          )}
+
+          {selectedPatient && (
+            <div className="space-y-3">
+              <button 
+                onClick={handleGenerateInvoice}
+                className="w-full btn-primary"
+                disabled={patientServices.length === 0}
+              >
+                Generate Invoice
+              </button>
             </div>
-            <button type="submit" className="btn-primary" disabled={status === 'loading'}>
-              Submit Claim
+          )}
+
+          {/* Generated Invoice */}
+          {generatedInvoice && (
+            <div className="mt-4 bg-white border rounded-lg p-4">
+              <h4 className="font-semibold mb-2">Generated Invoice</h4>
+              <div className="text-sm space-y-1 mb-3">
+                <div><strong>Invoice #:</strong> {generatedInvoice.invoiceNumber}</div>
+                <div><strong>Patient:</strong> {generatedInvoice.patientName}</div>
+                <div><strong>Total Amount:</strong> KES {generatedInvoice.totalAmount.toLocaleString()}</div>
+                <div><strong>Status:</strong> {generatedInvoice.status}</div>
+              </div>
+              
+              {generatedInvoice.status === 'Pending' && (
+                <div className="space-y-2">
+                  <button 
+                    onClick={() => handleAcceptPayment('Cash')}
+                    className="w-full btn-primary"
+                  >
+                    Accept Cash Payment
+                  </button>
+                  <button 
+                    onClick={() => handleAcceptPayment('M-Pesa')}
+                    className="w-full btn-secondary"
+                  >
+                    Accept M-Pesa Payment
+                  </button>
+                  <button 
+                    onClick={() => handleAcceptPayment('Card')}
+                    className="w-full btn-secondary"
+                  >
+                    Accept Card Payment
+                  </button>
+                </div>
+              )}
+              
+              {generatedInvoice.status === 'Paid' && (
+                <div className="p-2 bg-green-50 border border-green-200 rounded text-green-700">
+                  ✓ Payment completed successfully
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Reports and Other Functions */}
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold mb-4">Reports & Other Functions</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div>
+            <button className="btn-primary mb-4" onClick={handleGenerateReport}>
+              Generate Billing Report
             </button>
-          </form>
+            {report && (
+              <div className="p-4 border rounded bg-gray-50">
+                <div>Total Income: KES {report.totalIncome.toLocaleString()}</div>
+                <div>Pending Payments: KES {report.pendingPayments.toLocaleString()}</div>
+                <div>Insurance Claims: KES {report.insuranceClaims.toLocaleString()}</div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <h4 className="font-semibold mb-2">Process Refund</h4>
+              <form onSubmit={handleRefundSubmit} className="space-y-2">
+                <input
+                  type="text"
+                  name="billId"
+                  placeholder="Bill ID"
+                  value={formData.billId}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+                <input
+                  type="number"
+                  name="refundAmount"
+                  placeholder="Refund Amount"
+                  value={formData.refundAmount}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+                <button type="submit" className="btn-primary w-full">
+                  Process Refund
+                </button>
+              </form>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-2">Submit Insurance Claim</h4>
+              <form onSubmit={handleClaimSubmit} className="space-y-2">
+                <input
+                  type="text"
+                  name="claimId"
+                  placeholder="Claim ID"
+                  value={formData.claimId}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+                <input
+                  type="text"
+                  name="insuranceProvider"
+                  placeholder="Insurance Provider"
+                  value={formData.insuranceProvider}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+                <input
+                  type="number"
+                  name="claimAmount"
+                  placeholder="Claim Amount"
+                  value={formData.claimAmount}
+                  onChange={handleChange}
+                  className="w-full p-2 border rounded"
+                  required
+                />
+                <button type="submit" className="btn-primary w-full">
+                  Submit Claim
+                </button>
+              </form>
+            </div>
+          </div>
         </div>
       </div>
     </div>
