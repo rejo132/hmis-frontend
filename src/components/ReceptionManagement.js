@@ -12,6 +12,7 @@ const ReceptionManagement = () => {
   const { user } = useSelector((state) => state.auth);
   const { status: patientStatus, error: patientError } = useSelector((state) => state.patients || {});
   const { status: appointmentStatus, error: appointmentError } = useSelector((state) => state.appointments || {});
+  const [doctors, setDoctors] = useState([]);
   const [formData, setFormData] = useState({
     patientId: '',
     name: '',
@@ -19,6 +20,7 @@ const ReceptionManagement = () => {
     gender: '',
     appointmentDate: '',
     appointmentTime: '',
+    doctorId: '',
   });
   const [queue, setQueue] = useState([]);
   const [checkedIn, setCheckedIn] = useState({});
@@ -47,6 +49,17 @@ const ReceptionManagement = () => {
       }
     }
     fetchQueue();
+  }, []);
+
+  useEffect(() => {
+    async function fetchDoctors() {
+      try {
+        const token = localStorage.getItem('access_token');
+        const res = await axios.get('/api/employees', { headers: { Authorization: `Bearer ${token}` } });
+        setDoctors(res.data.employees.filter(e => e.role === 'Doctor'));
+      } catch (err) {}
+    }
+    fetchDoctors();
   }, []);
 
   const handleChange = (e) => {
@@ -79,12 +92,13 @@ const ReceptionManagement = () => {
     try {
       await dispatch(scheduleAppointment({
         patient_id: parseInt(formData.patientId),
-        date: `${formData.appointmentDate}T${formData.appointmentTime}:00Z`,
+        doctor_id: parseInt(formData.doctorId),
+        appointment_time: `${formData.appointmentDate}T${formData.appointmentTime}:00Z`,
         status: 'Scheduled',
         created_by: user.username,
       })).unwrap();
       toast.success('Appointment scheduled successfully');
-      setFormData({ ...formData, appointmentDate: '', appointmentTime: '' });
+      setFormData({ ...formData, appointmentDate: '', appointmentTime: '', doctorId: '' });
     } catch (err) {
       toast.error(`Failed to schedule appointment: ${err}`);
     }
@@ -198,6 +212,21 @@ const ReceptionManagement = () => {
                 className="mt-1 p-2 block w-full border rounded-md"
                 required
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Doctor</label>
+              <select
+                name="doctorId"
+                value={formData.doctorId}
+                onChange={handleChange}
+                className="mt-1 p-2 block w-full border rounded-md"
+                required
+              >
+                <option value="">Select Doctor</option>
+                {doctors.map((doc) => (
+                  <option key={doc.id} value={doc.id}>{doc.username}</option>
+                ))}
+              </select>
             </div>
             <button
               type="submit"
