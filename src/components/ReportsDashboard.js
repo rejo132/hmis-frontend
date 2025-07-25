@@ -19,7 +19,17 @@ const ReportsDashboard = () => {
   const [auditError, setAuditError] = useState(null);
 
   useEffect(() => {
-    if (user && user.role === 'Admin') {
+    if (
+      user && [
+        'Admin',
+        'Doctor',
+        'Nurse',
+        'Lab Tech',
+        'Pharmacist',
+        'Receptionist',
+        'Billing',
+      ].includes(user.role)
+    ) {
       dispatch(fetchPatients(1))
         .unwrap()
         .catch((err) => toast.error(`Failed to load patients: ${err}`));
