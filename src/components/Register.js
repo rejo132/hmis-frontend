@@ -99,8 +99,12 @@ const Register = () => {
               <option value="Doctor">Doctor</option>
               <option value="Nurse">Nurse</option>
               <option value="Admin">Admin</option>
-              <option value="Lab">Lab</option>
-              <option value="Reception">Reception</option>
+              <option value="Lab Tech">Lab Tech</option>
+              <option value="Receptionist">Receptionist</option>
+              <option value="Billing">Billing</option>
+              <option value="Pharmacist">Pharmacist</option>
+              <option value="IT">IT</option>
+              <option value="Accountant">Accountant</option>
             </select>
           </div>
           <div className="flex space-x-4">

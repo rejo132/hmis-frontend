@@ -73,6 +73,10 @@ const ReceptionManagement = () => {
 
   return (
     <div className="container mx-auto p-4 animate-fade-in">
+      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center">
+        <span className="text-lg font-bold text-blue-700 mr-4">Role: Receptionist</span>
+        <span className="text-gray-700">Available actions: Register patients, schedule appointments, view check-in/out, access basic patient demographics.</span>
+      </div>
       <h2 className="text-2xl font-bold mb-4">Reception Management</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
