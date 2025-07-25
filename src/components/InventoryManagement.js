@@ -2,11 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import { fetchInventory, dispenseItem } from '../slices/inventorySlice';
+import axios from 'axios';
 
 const InventoryManagement = () => {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
   const { items, status, error } = useSelector((state) => state.inventory);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [selectedPrescription, setSelectedPrescription] = useState(null);
   const [dispenseForm, setDispenseForm] = useState({
     itemId: '',
     quantity: '',
@@ -14,24 +17,54 @@ const InventoryManagement = () => {
   });
   const [counselingNote, setCounselingNote] = useState('');
   const [interactionAlert, setInteractionAlert] = useState('');
+  const [dosageInstructions, setDosageInstructions] = useState('');
 
   const knownInteractions = [
     { drugs: ['DrugA', 'DrugB'], message: 'DrugA and DrugB should not be used together.' },
+    { drugs: ['Aspirin', 'Warfarin'], message: 'Increased risk of bleeding when taken together.' },
+    { drugs: ['Amoxicillin', 'Birth Control'], message: 'Birth control may be less effective.' },
   ];
 
   useEffect(() => {
     dispatch(fetchInventory())
       .unwrap()
       .catch((err) => toast.error(`Error fetching inventory: ${err}`));
+    fetchPrescriptions();
   }, [dispatch]);
 
   useEffect(() => {
     if (error) toast.error(`Error: ${error}`);
   }, [error]);
 
+  const fetchPrescriptions = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const API_BASE = 'http://localhost:5000';
+      const res = await axios.get(`${API_BASE}/api/records`, { 
+        headers: { Authorization: `Bearer ${token}` } 
+      });
+      // Filter records that have prescriptions
+      const recordsWithPrescriptions = (res.data.records || []).filter(record => 
+        record.prescription && record.prescription.trim() !== ''
+      );
+      setPrescriptions(recordsWithPrescriptions);
+    } catch (err) {
+      toast.error('Failed to fetch prescriptions');
+    }
+  };
+
+  const handlePrescriptionSelect = (prescription) => {
+    setSelectedPrescription(prescription);
+    setDispenseForm(prev => ({ 
+      ...prev, 
+      patientId: prescription.patient_id,
+      itemId: prescription.prescription.split(' ')[0] // Extract first word as medication name
+    }));
+  };
+
   const handleDispenseChange = (e) => {
     setDispenseForm({ ...dispenseForm, [e.target.name]: e.target.value });
-    // Drug interaction check (mock)
+    // Drug interaction check
     if (e.target.name === 'itemId') {
       const found = knownInteractions.find((i) => i.drugs.includes(e.target.value));
       setInteractionAlert(found ? found.message : '');
@@ -41,11 +74,20 @@ const InventoryManagement = () => {
   const handleDispenseSubmit = async (e) => {
     e.preventDefault();
     try {
-      await dispatch(dispenseItem({ ...dispenseForm, dispensedBy: user.username })).unwrap();
+      await dispatch(dispenseItem({ 
+        ...dispenseForm, 
+        dispensedBy: user.username,
+        counselingNote,
+        dosageInstructions,
+        prescriptionId: selectedPrescription?.id
+      })).unwrap();
       toast.success('Medication dispensed successfully');
       setDispenseForm({ itemId: '', quantity: '', patientId: '' });
       setCounselingNote('');
       setInteractionAlert('');
+      setDosageInstructions('');
+      setSelectedPrescription(null);
+      fetchPrescriptions(); // Refresh prescriptions
     } catch (err) {
       toast.error(`Error dispensing medication: ${err}`);
     }
@@ -64,19 +106,63 @@ const InventoryManagement = () => {
 
   return (
     <div className="container mx-auto p-4 animate-fade-in">
-      <h2 className="text-2xl font-bold mb-4">Inventory Management</h2>
-      <div className="space-y-8">
+      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <span className="text-lg font-bold text-blue-700 mr-4">Role: Pharmacist</span>
+        <span className="text-gray-700">View e-prescriptions, update inventory, record dosage/counseling, and dispense medication.</span>
+      </div>
+      
+      <h2 className="text-2xl font-bold mb-4">Pharmacy Management</h2>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Prescriptions List */}
+        <div>
+          <h3 className="text-xl font-semibold mb-4">E-Prescriptions</h3>
+          <div className="bg-white border rounded-lg p-4 max-h-96 overflow-y-auto">
+            {prescriptions.length === 0 ? (
+              <p className="text-gray-500">No prescriptions available.</p>
+            ) : (
+              <div className="space-y-3">
+                {prescriptions.map((prescription) => (
+                  <div 
+                    key={prescription.id}
+                    className={`p-3 border rounded cursor-pointer transition-colors ${
+                      selectedPrescription?.id === prescription.id 
+                        ? 'bg-blue-100 border-blue-300' 
+                        : 'hover:bg-gray-50'
+                    }`}
+                    onClick={() => handlePrescriptionSelect(prescription)}
+                  >
+                    <div className="font-medium">Patient ID: {prescription.patient_id}</div>
+                    <div className="text-sm text-gray-600">Prescription: {prescription.prescription}</div>
+                    <div className="text-sm text-gray-500">Diagnosis: {prescription.diagnosis}</div>
+                    <div className="text-sm text-gray-500">Date: {prescription.created_at}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Dispensing Form */}
         <div>
           <h3 className="text-xl font-semibold mb-4">Dispense Medication</h3>
-          <form onSubmit={handleDispenseSubmit} className="space-y-4 max-w-lg">
+          {selectedPrescription && (
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
+              <strong>Selected Prescription:</strong> Patient {selectedPrescription.patient_id}
+              <div className="text-sm mt-1">{selectedPrescription.prescription}</div>
+            </div>
+          )}
+          
+          <form onSubmit={handleDispenseSubmit} className="space-y-4 bg-white border rounded-lg p-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Item ID</label>
+              <label className="block text-sm font-medium text-gray-700">Medication Name</label>
               <input
                 type="text"
                 name="itemId"
                 value={dispenseForm.itemId}
                 onChange={handleDispenseChange}
                 className="mt-1 p-2 block w-full border rounded-md"
+                placeholder="e.g., Amoxicillin, Ibuprofen"
                 required
               />
             </div>
@@ -88,6 +174,7 @@ const InventoryManagement = () => {
                 value={dispenseForm.quantity}
                 onChange={handleDispenseChange}
                 className="mt-1 p-2 block w-full border rounded-md"
+                placeholder="Number of units"
                 required
               />
             </div>
@@ -100,11 +187,29 @@ const InventoryManagement = () => {
                 onChange={handleDispenseChange}
                 className="mt-1 p-2 block w-full border rounded-md"
                 required
+                readOnly={!!selectedPrescription}
               />
             </div>
+            
             {interactionAlert && (
-              <div className="text-red-600 font-semibold">{interactionAlert}</div>
+              <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 font-semibold">
+                ⚠️ Drug Interaction Alert: {interactionAlert}
+              </div>
             )}
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Dosage Instructions</label>
+              <textarea
+                name="dosageInstructions"
+                value={dosageInstructions}
+                onChange={(e) => setDosageInstructions(e.target.value)}
+                className="mt-1 p-2 block w-full border rounded-md"
+                rows="3"
+                placeholder="e.g., Take 1 tablet twice daily with food"
+                required
+              />
+            </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-700">Patient Counseling Note</label>
               <textarea
@@ -112,20 +217,31 @@ const InventoryManagement = () => {
                 value={counselingNote}
                 onChange={(e) => setCounselingNote(e.target.value)}
                 className="mt-1 p-2 block w-full border rounded-md"
+                rows="3"
+                placeholder="e.g., Side effects, storage instructions, when to contact doctor"
               />
             </div>
-            <button type="submit" className="btn-primary" disabled={status === 'loading'}>
-              Dispense
+            
+            <button 
+              type="submit" 
+              className="w-full btn-primary" 
+              disabled={status === 'loading'}
+            >
+              Dispense Medication
             </button>
           </form>
         </div>
-        <div>
-          <h3 className="text-xl font-semibold mb-4">Inventory</h3>
+      </div>
+
+      {/* Inventory Management */}
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold mb-4">Inventory Status</h3>
+        <div className="bg-white border rounded-lg overflow-hidden">
           {status === 'loading' ? (
             <div className="text-center py-4">Loading inventory...</div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border">
+              <table className="min-w-full">
                 <thead>
                   <tr className="bg-gray-50">
                     <th className="py-2 px-4 border text-left">ID</th>
