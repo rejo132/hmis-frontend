@@ -14,9 +14,25 @@ const LabOrderForm = () => {
     sample_collected: false,
     results: '',
   });
+  const [validated, setValidated] = useState(false);
+  const [labReport, setLabReport] = useState(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleValidate = () => {
+    setValidated(true);
+    toast.success('Result validated');
+  };
+
+  const handleGenerateLabReport = () => {
+    setLabReport({
+      totalTests: 50,
+      positive: 10,
+      negative: 40,
+      avgTurnaround: '2h',
+    });
   };
 
   const handleSubmit = async (e) => {
@@ -78,6 +94,21 @@ const LabOrderForm = () => {
               onChange={handleChange}
               className="w-full p-2 border rounded"
             />
+          </div>
+          <div className="mb-8">
+            <label className="inline-flex items-center">
+              <input type="checkbox" checked={validated} onChange={handleValidate} className="form-checkbox" />
+              <span className="ml-2">Result Validated</span>
+            </label>
+            <button className="btn-primary ml-4" onClick={handleGenerateLabReport}>Generate Lab Report</button>
+            {labReport && (
+              <div className="mt-4 p-4 border rounded bg-gray-50">
+                <div>Total Tests: {labReport.totalTests}</div>
+                <div>Positive: {labReport.positive}</div>
+                <div>Negative: {labReport.negative}</div>
+                <div>Avg Turnaround: {labReport.avgTurnaround}</div>
+              </div>
+            )}
           </div>
           <div className="flex space-x-4">
             <button

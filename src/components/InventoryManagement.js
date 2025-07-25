@@ -12,6 +12,12 @@ const InventoryManagement = () => {
     quantity: '',
     patientId: '',
   });
+  const [counselingNote, setCounselingNote] = useState('');
+  const [interactionAlert, setInteractionAlert] = useState('');
+
+  const knownInteractions = [
+    { drugs: ['DrugA', 'DrugB'], message: 'DrugA and DrugB should not be used together.' },
+  ];
 
   useEffect(() => {
     dispatch(fetchInventory())
@@ -25,6 +31,11 @@ const InventoryManagement = () => {
 
   const handleDispenseChange = (e) => {
     setDispenseForm({ ...dispenseForm, [e.target.name]: e.target.value });
+    // Drug interaction check (mock)
+    if (e.target.name === 'itemId') {
+      const found = knownInteractions.find((i) => i.drugs.includes(e.target.value));
+      setInteractionAlert(found ? found.message : '');
+    }
   };
 
   const handleDispenseSubmit = async (e) => {
@@ -33,6 +44,8 @@ const InventoryManagement = () => {
       await dispatch(dispenseItem({ ...dispenseForm, dispensedBy: user.username })).unwrap();
       toast.success('Medication dispensed successfully');
       setDispenseForm({ itemId: '', quantity: '', patientId: '' });
+      setCounselingNote('');
+      setInteractionAlert('');
     } catch (err) {
       toast.error(`Error dispensing medication: ${err}`);
     }
@@ -87,6 +100,18 @@ const InventoryManagement = () => {
                 onChange={handleDispenseChange}
                 className="mt-1 p-2 block w-full border rounded-md"
                 required
+              />
+            </div>
+            {interactionAlert && (
+              <div className="text-red-600 font-semibold">{interactionAlert}</div>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700">Patient Counseling Note</label>
+              <textarea
+                name="counselingNote"
+                value={counselingNote}
+                onChange={(e) => setCounselingNote(e.target.value)}
+                className="mt-1 p-2 block w-full border rounded-md"
               />
             </div>
             <button type="submit" className="btn-primary" disabled={status === 'loading'}>

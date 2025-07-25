@@ -37,6 +37,7 @@ import SystemSettings from './components/SystemSettings';
 import UserRoleManagement from './components/UserRoleManagement';
 import SecurityLogs from './components/SecurityLogs';
 import FinanceManagement from './components/FinanceManagement';
+import TriageAssessment from './components/TriageAssessment';
 
 const App = () => {
   const dispatch = useDispatch();
@@ -546,6 +547,10 @@ const App = () => {
                 <Route
                   path="/doctor-portal"
                   element={status === 'succeeded' && user && (user.role === 'Admin' || user.role === 'Doctor') ? <DoctorPortal /> : <Navigate to="/dashboard" />}
+                />
+                <Route
+                  path="/triage"
+                  element={status === 'succeeded' && user && user.role === 'Nurse' ? <TriageAssessment /> : <Navigate to="/dashboard" />}
                 />
                 <Route
                   path="*"

@@ -14,6 +14,7 @@ const BillingManagement = () => {
     insuranceProvider: '',
     claimAmount: '',
   });
+  const [report, setReport] = useState(null);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -56,11 +57,30 @@ const BillingManagement = () => {
     }
   };
 
+  const handleGenerateReport = () => {
+    // Mock report logic
+    setReport({
+      totalIncome: 100000,
+      pendingPayments: 5000,
+      insuranceClaims: 20000,
+    });
+  };
+
   return (
     <div className="container mx-auto p-4 animate-fade-in">
       <h2 className="text-2xl font-bold mb-4">Billing Management</h2>
       {status === 'loading' && <p>Loading...</p>}
       {error && <p className="text-red-500 mb-4">{error}</p>}
+      <div className="mb-8">
+        <button className="btn-primary" onClick={handleGenerateReport}>Generate Billing Report</button>
+        {report && (
+          <div className="mt-4 p-4 border rounded bg-gray-50">
+            <div>Total Income: KES {report.totalIncome}</div>
+            <div>Pending Payments: KES {report.pendingPayments}</div>
+            <div>Insurance Claims: KES {report.insuranceClaims}</div>
+          </div>
+        )}
+      </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div>
           <h3 className="text-xl font-semibold mb-4">Process Refund</h3>

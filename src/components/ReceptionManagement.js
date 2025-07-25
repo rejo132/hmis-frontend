@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { addPatient } from '../slices/patientSlice';
 import { scheduleAppointment } from '../slices/appointmentSlice';
+import axios from 'axios';
 
 const ReceptionManagement = () => {
   const dispatch = useDispatch();
@@ -19,6 +20,8 @@ const ReceptionManagement = () => {
     appointmentDate: '',
     appointmentTime: '',
   });
+  const [queue, setQueue] = useState([]);
+  const [checkedIn, setCheckedIn] = useState({});
 
   useEffect(() => {
     // Allow both Admin and Receptionist roles
@@ -32,6 +35,19 @@ const ReceptionManagement = () => {
     if (patientError) toast.error(`Error: ${patientError}`);
     if (appointmentError) toast.error(`Error: ${appointmentError}`);
   }, [patientError, appointmentError]);
+
+  useEffect(() => {
+    async function fetchQueue() {
+      try {
+        const token = localStorage.getItem('access_token');
+        const res = await axios.get('/api/queue', { headers: { Authorization: `Bearer ${token}` } });
+        setQueue(res.data.queue);
+      } catch (err) {
+        // handle error
+      }
+    }
+    fetchQueue();
+  }, []);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -48,7 +64,10 @@ const ReceptionManagement = () => {
         address: '', // Add default address
         registered_by: user.username,
       })).unwrap();
-      toast.success('Patient registered successfully');
+      // Add to queue
+      const token = localStorage.getItem('access_token');
+      await axios.post('/api/queue', { patient_id: formData.patientId, name: formData.name }, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success('Patient registered and added to queue');
       setFormData({ ...formData, patientId: '', name: '', dob: '', gender: '' });
     } catch (err) {
       toast.error(`Failed to register patient: ${err}`);
@@ -69,6 +88,22 @@ const ReceptionManagement = () => {
     } catch (err) {
       toast.error(`Failed to schedule appointment: ${err}`);
     }
+  };
+
+  const handleCheckIn = async (patientId) => {
+    setCheckedIn((prev) => ({ ...prev, [patientId]: true }));
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.post('/api/checkin', { patient_id: patientId }, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (err) {}
+  };
+
+  const handleCheckOut = async (patientId) => {
+    setCheckedIn((prev) => ({ ...prev, [patientId]: false }));
+    try {
+      const token = localStorage.getItem('access_token');
+      await axios.post('/api/checkout', { patient_id: patientId }, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (err) {}
   };
 
   return (
@@ -173,6 +208,29 @@ const ReceptionManagement = () => {
             </button>
           </form>
         </div>
+      </div>
+      <div className="mb-8">
+        <h3 className="text-xl font-semibold mb-4">Patient Queue</h3>
+        <ul className="space-y-2">
+          {queue.length === 0 ? (
+            <li className="text-gray-500">No patients in queue.</li>
+          ) : (
+            queue.map((patient) => (
+              <li key={patient.id} className="flex items-center justify-between p-2 border rounded">
+                <span>{patient.name} (ID: {patient.id})</span>
+                {checkedIn[patient.id] ? (
+                  <button className="btn-secondary ml-2" onClick={() => handleCheckOut(patient.id)}>
+                    Check-Out
+                  </button>
+                ) : (
+                  <button className="btn-primary ml-2" onClick={() => handleCheckIn(patient.id)}>
+                    Check-In
+                  </button>
+                )}
+              </li>
+            ))
+          )}
+        </ul>
       </div>
     </div>
   );
