@@ -24,6 +24,8 @@ const ReceptionManagement = () => {
   });
   const [queue, setQueue] = useState([]);
   const [checkedIn, setCheckedIn] = useState({});
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
 
   useEffect(() => {
     // Allow both Admin and Receptionist roles
@@ -123,6 +125,21 @@ const ReceptionManagement = () => {
       const API_BASE = 'http://localhost:5000';
       await axios.post(`${API_BASE}/api/checkout`, { patient_id: patientId }, { headers: { Authorization: `Bearer ${token}` } });
     } catch (err) {}
+  };
+
+  const handleSearch = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('access_token');
+      const API_BASE = 'http://localhost:5000';
+      const res = await axios.get(`${API_BASE}/api/patients`, {
+        headers: { Authorization: `Bearer ${token}` },
+        params: { q: searchQuery }
+      });
+      setSearchResults(res.data.patients);
+    } catch (err) {
+      toast.error('Search failed');
+    }
   };
 
   return (
@@ -244,6 +261,28 @@ const ReceptionManagement = () => {
         </div>
       </div>
       <div className="mb-8">
+        <form onSubmit={handleSearch} className="flex space-x-2 mb-2">
+          <input
+            type="text"
+            placeholder="Search patient by name, contact, or ID"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+            className="p-2 border rounded w-full"
+          />
+          <button type="submit" className="btn-primary">Search</button>
+        </form>
+        {searchResults.length > 0 && (
+          <div className="bg-white border rounded p-2">
+            <h4 className="font-semibold mb-2">Search Results</h4>
+            <ul>
+              {searchResults.map(p => (
+                <li key={p.id} className="py-1 border-b last:border-b-0">
+                  ID: {p.id} | {p.name} | {p.contact}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <h3 className="text-xl font-semibold mb-4">Patient Queue</h3>
         <ul className="space-y-2">
           {queue.length === 0 ? (
