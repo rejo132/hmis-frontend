@@ -1,10 +1,11 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate, NavLink } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { fetchPatients } from '../slices/patientSlice';
 import { fetchAppointments } from '../slices/appointmentSlice';
 import { fetchRecords } from '../slices/recordSlice';
+import axios from 'axios';
 
 const DoctorPortal = () => {
   const navigate = useNavigate();
@@ -13,6 +14,16 @@ const DoctorPortal = () => {
   const { patients, error: patientError } = useSelector((state) => state.patients);
   const { appointments, error: appointmentError } = useSelector((state) => state.appointments);
   const { records, error: recordError } = useSelector((state) => state.records);
+  
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [consultationForm, setConsultationForm] = useState({
+    diagnosis: '',
+    prescription: '',
+    labTests: '',
+    notes: '',
+    followUp: '',
+  });
+  const [showConsultationForm, setShowConsultationForm] = useState(false);
 
   useEffect(() => {
     if (user && (user.role === 'Admin' || user.role === 'Doctor')) {
@@ -31,81 +42,271 @@ const DoctorPortal = () => {
     if (recordError) toast.error(`Failed to load records: ${recordError}`);
   }, [patientError, appointmentError, recordError]);
 
+  const handlePatientSelect = (patient) => {
+    setSelectedPatient(patient);
+    setShowConsultationForm(true);
+  };
+
+  const handleConsultationChange = (e) => {
+    setConsultationForm({ ...consultationForm, [e.target.name]: e.target.value });
+  };
+
+  const handleConsultationSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('access_token');
+      const API_BASE = 'http://localhost:5000';
+      
+      // Update medical record with consultation
+      await axios.post(`${API_BASE}/api/records`, {
+        patient_id: selectedPatient.id,
+        diagnosis: consultationForm.diagnosis,
+        prescription: consultationForm.prescription,
+        notes: consultationForm.notes,
+        doctor_id: user.id,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+
+      // If lab tests are ordered, create lab order
+      if (consultationForm.labTests) {
+        await axios.post(`${API_BASE}/api/lab-orders`, {
+          patient_id: selectedPatient.id,
+          test_type: consultationForm.labTests,
+          status: 'Ordered',
+          ordered_by: user.id,
+        }, { headers: { Authorization: `Bearer ${token}` } });
+      }
+
+      toast.success('Consultation completed and recorded');
+      setConsultationForm({
+        diagnosis: '', prescription: '', labTests: '', notes: '', followUp: '',
+      });
+      setSelectedPatient(null);
+      setShowConsultationForm(false);
+      
+      // Refresh data
+      dispatch(fetchRecords(1));
+    } catch (err) {
+      toast.error('Failed to record consultation');
+    }
+  };
+
   const handleReviewTest = (recordId) => {
     toast.success(`Review Initiated for Record ${recordId}`);
     // TODO: Implement backend endpoint POST /records/review
   };
 
+  const getPatientRecords = (patientId) => {
+    return records.filter(r => r.patient_id === patientId);
+  };
+
+  const getPatientAppointments = (patientId) => {
+    return appointments.filter(a => a.patient_id === patientId);
+  };
+
   return (
     <div className="container mx-auto p-6 animate-fade-in">
+      <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+        <span className="text-lg font-bold text-blue-700 mr-4">Role: Doctor</span>
+        <span className="text-gray-700">Review triage notes, order lab tests, prescribe medication, update diagnosis and treatment plans.</span>
+      </div>
+      
       <h2 className="text-3xl font-bold mb-6 text-gray-900">Doctor Portal</h2>
-      <div className="mb-8">
-        <NavLink to="/records/new" className="btn-primary inline-flex items-center">
-          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path>
-          </svg>
-          Add Note
-        </NavLink>
-      </div>
-      <div className="card mb-8">
-        <h3 className="text-xl font-semibold mb-4">Patient Cases</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-200 p-3 text-left">Patient ID</th>
-                <th className="border border-gray-200 p-3 text-left">Name</th>
-                <th className="border border-gray-200 p-3 text-left">Diagnosis</th>
-                <th className="border border-gray-200 p-3 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {patients.map((patient) =>
-                records
-                  .filter((r) => r.patient_id === patient.id)
-                  .map((record, index) => (
-                    <tr key={`${patient.id}-${record.id}`} className={`table-row ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                      <td className="border border-gray-200 p-3">{patient.id}</td>
-                      <td className="border border-gray-200 p-3">{patient.name}</td>
-                      <td className="border border-gray-200 p-3">{record.diagnosis}</td>
-                      <td className="border border-gray-200 p-3">
-                        <button
-                          onClick={() => handleReviewTest(record.id)}
-                          className="btn-primary"
-                        >
-                          Review Test
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
-          </table>
+      
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Patient List */}
+        <div>
+          <h3 className="text-xl font-semibold mb-4">Patient Cases</h3>
+          <div className="bg-white border rounded-lg p-4 max-h-96 overflow-y-auto">
+            {patients.length === 0 ? (
+              <p className="text-gray-500">No patients available.</p>
+            ) : (
+              <div className="space-y-3">
+                {patients.map((patient) => {
+                  const patientRecords = getPatientRecords(patient.id);
+                  const patientAppointments = getPatientAppointments(patient.id);
+                  const hasTriage = patientRecords.some(r => r.diagnosis === 'Triage Assessment');
+                  
+                  return (
+                    <div 
+                      key={patient.id}
+                      className={`p-3 border rounded cursor-pointer transition-colors ${
+                        selectedPatient?.id === patient.id 
+                          ? 'bg-blue-100 border-blue-300' 
+                          : 'hover:bg-gray-50'
+                      }`}
+                      onClick={() => handlePatientSelect(patient)}
+                    >
+                      <div className="font-medium">{patient.name}</div>
+                      <div className="text-sm text-gray-600">ID: {patient.id}</div>
+                      <div className="text-sm text-gray-500">
+                        Records: {patientRecords.length} | Appointments: {patientAppointments.length}
+                      </div>
+                      {hasTriage && (
+                        <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mt-1">
+                          Triage Complete
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Consultation Form */}
+        {showConsultationForm && selectedPatient && (
+          <div>
+            <h3 className="text-xl font-semibold mb-4">Consultation</h3>
+            <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
+              <strong>Patient:</strong> {selectedPatient.name} (ID: {selectedPatient.id})
+            </div>
+            
+            {/* Patient History */}
+            <div className="mb-4">
+              <h4 className="font-semibold mb-2">Patient History</h4>
+              <div className="bg-gray-50 p-3 rounded text-sm">
+                {getPatientRecords(selectedPatient.id).map((record, index) => (
+                  <div key={record.id} className="mb-2 pb-2 border-b last:border-b-0">
+                    <div className="font-medium">{record.diagnosis}</div>
+                    <div className="text-gray-600">{record.prescription}</div>
+                    <div className="text-gray-500 text-xs">{record.created_at}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            <form onSubmit={handleConsultationSubmit} className="space-y-4 bg-white border rounded-lg p-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Diagnosis</label>
+                <textarea 
+                  name="diagnosis" 
+                  value={consultationForm.diagnosis} 
+                  onChange={handleConsultationChange} 
+                  className="w-full border p-2 rounded" 
+                  rows="3"
+                  placeholder="Enter diagnosis..."
+                  required
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Prescription</label>
+                <textarea 
+                  name="prescription" 
+                  value={consultationForm.prescription} 
+                  onChange={handleConsultationChange} 
+                  className="w-full border p-2 rounded" 
+                  rows="3"
+                  placeholder="Enter prescription details..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Lab Tests (Optional)</label>
+                <select 
+                  name="labTests" 
+                  value={consultationForm.labTests} 
+                  onChange={handleConsultationChange} 
+                  className="w-full border p-2 rounded"
+                >
+                  <option value="">No lab tests</option>
+                  <option value="Blood Test">Blood Test</option>
+                  <option value="Urine Test">Urine Test</option>
+                  <option value="X-Ray">X-Ray</option>
+                  <option value="MRI">MRI</option>
+                  <option value="CT Scan">CT Scan</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Notes</label>
+                <textarea 
+                  name="notes" 
+                  value={consultationForm.notes} 
+                  onChange={handleConsultationChange} 
+                  className="w-full border p-2 rounded" 
+                  rows="3"
+                  placeholder="Additional notes..."
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700">Follow-up</label>
+                <input 
+                  type="text" 
+                  name="followUp" 
+                  value={consultationForm.followUp} 
+                  onChange={handleConsultationChange} 
+                  className="w-full border p-2 rounded" 
+                  placeholder="e.g., Follow up in 1 week"
+                />
+              </div>
+              
+              <div className="flex space-x-2">
+                <button 
+                  type="submit" 
+                  className="flex-1 btn-primary"
+                >
+                  Complete Consultation
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setSelectedPatient(null);
+                    setShowConsultationForm(false);
+                    setConsultationForm({
+                      diagnosis: '', prescription: '', labTests: '', notes: '', followUp: '',
+                    });
+                  }}
+                  className="flex-1 btn-secondary"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
       </div>
-      <div className="card">
-        <h3 className="text-xl font-semibold mb-4">Appointments</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse">
-            <thead>
-              <tr className="bg-gray-100">
-                <th className="border border-gray-200 p-3 text-left">ID</th>
-                <th className="border border-gray-200 p-3 text-left">Patient ID</th>
-                <th className="border border-gray-200 p-3 text-left">Time</th>
-                <th className="border border-gray-200 p-3 text-left">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {appointments.map((appt, index) => (
-                <tr key={appt.id} className={`table-row ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
-                  <td className="border border-gray-200 p-3">{appt.id}</td>
-                  <td className="border border-gray-200 p-3">{appt.patient_id}</td>
-                  <td className="border border-gray-200 p-3">{appt.appointment_time}</td>
-                  <td className="border border-gray-200 p-3">{appt.status}</td>
+
+      {/* Appointments */}
+      <div className="mt-8">
+        <h3 className="text-xl font-semibold mb-4">Today's Appointments</h3>
+        <div className="bg-white border rounded-lg overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-100">
+                  <th className="p-3 text-left">ID</th>
+                  <th className="p-3 text-left">Patient ID</th>
+                  <th className="p-3 text-left">Time</th>
+                  <th className="p-3 text-left">Status</th>
+                  <th className="p-3 text-left">Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {appointments.map((appt, index) => (
+                  <tr key={appt.id} className={`${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                    <td className="p-3">{appt.id}</td>
+                    <td className="p-3">{appt.patient_id}</td>
+                    <td className="p-3">{appt.appointment_time}</td>
+                    <td className="p-3">{appt.status}</td>
+                    <td className="p-3">
+                      <button
+                        onClick={() => {
+                          const patient = patients.find(p => p.id === appt.patient_id);
+                          if (patient) handlePatientSelect(patient);
+                        }}
+                        className="btn-primary text-sm"
+                      >
+                        Start Consultation
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
