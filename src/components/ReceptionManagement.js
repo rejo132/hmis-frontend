@@ -100,10 +100,18 @@ const ReceptionManagement = () => {
     try {
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
+      console.log('Fetching PatientVisits...');
       const res = await axios.get(`${API_BASE}/api/patient-visits`, { headers: { Authorization: `Bearer ${token}` } });
+      console.log('PatientVisits fetched:', res.data);
       setPatientVisits(res.data.visits || []);
     } catch (err) {
-      // handle error
+      console.error('Error fetching PatientVisits:', err);
+      if (err.response) {
+        console.error('Error response:', err.response.data);
+        toast.error(`Failed to fetch patient visits: ${err.response.data.message || err.message}`);
+      } else {
+        toast.error(`Failed to fetch patient visits: ${err.message}`);
+      }
     }
   };
 
@@ -114,6 +122,7 @@ const ReceptionManagement = () => {
   const handlePatientSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log('Starting patient registration...');
       const result = await dispatch(addPatient({
         name: formData.name,
         dob: formData.dob,
@@ -122,17 +131,31 @@ const ReceptionManagement = () => {
         address: '', // Add default address
         registered_by: user.username,
       })).unwrap();
+      console.log('Patient created:', result);
+      
       // Add to queue with the actual patient ID from the response
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
+      console.log('Adding to queue...');
       await axios.post(`${API_BASE}/api/queue`, { patient_id: result.id, name: formData.name }, { headers: { Authorization: `Bearer ${token}` } });
+      console.log('Added to queue successfully');
+      
       // Create PatientVisit for workflow
-      await axios.post(`${API_BASE}/api/patient-visits`, { patient_id: result.id }, { headers: { Authorization: `Bearer ${token}` } });
+      console.log('Creating PatientVisit...');
+      const visitResponse = await axios.post(`${API_BASE}/api/patient-visits`, { patient_id: result.id }, { headers: { Authorization: `Bearer ${token}` } });
+      console.log('PatientVisit created:', visitResponse.data);
+      
       toast.success('Patient registered, added to queue, and workflow started');
       setFormData({ ...formData, patientId: '', name: '', dob: '', gender: '' });
       fetchPatientVisits();
     } catch (err) {
-      toast.error(`Failed to register patient: ${err}`);
+      console.error('Registration error:', err);
+      if (err.response) {
+        console.error('Error response:', err.response.data);
+        toast.error(`Failed to register patient: ${err.response.data.message || err.message}`);
+      } else {
+        toast.error(`Failed to register patient: ${err.message}`);
+      }
     }
   };
 
