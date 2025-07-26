@@ -28,10 +28,18 @@ const TriageAssessment = () => {
     try {
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
+      console.log('Nurse fetching PatientVisits...');
       const res = await axios.get(`${API_BASE}/api/patient-visits`, { headers: { Authorization: `Bearer ${token}` } });
+      console.log('Nurse PatientVisits response:', res.data);
       setPatientVisits(res.data.visits || []);
     } catch (err) {
-      toast.error('Failed to fetch patient visits');
+      console.error('Nurse error fetching PatientVisits:', err);
+      if (err.response) {
+        console.error('Error response:', err.response.data);
+        toast.error(`Failed to fetch patient visits: ${err.response.data.message || err.message}`);
+      } else {
+        toast.error(`Failed to fetch patient visits: ${err.message}`);
+      }
     }
   };
 
@@ -50,10 +58,17 @@ const TriageAssessment = () => {
     try {
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
-      // Update PatientVisit with triage notes and move to doctor stage
-      await axios.put(`${API_BASE}/api/patient-visits/${selectedVisit.id}`, {
+      console.log('Nurse submitting triage assessment for visit:', selectedVisit.id);
+      
+      const triageData = {
         triage_notes: `BP: ${formData.blood_pressure}, Temp: ${formData.temperature}, Pulse: ${formData.pulse}, Resp: ${formData.respiration}, Priority: ${formData.priority}, History: ${formData.history}, Allergies: ${formData.allergies}, Referral: ${formData.referral}, Prep: ${formData.testPreparation}`
-      }, { headers: { Authorization: `Bearer ${token}` } });
+      };
+      console.log('Triage data being sent:', triageData);
+      
+      // Update PatientVisit with triage notes and move to doctor stage
+      const response = await axios.put(`${API_BASE}/api/patient-visits/${selectedVisit.id}`, triageData, { headers: { Authorization: `Bearer ${token}` } });
+      console.log('Triage update response:', response.data);
+      
       toast.success('Triage assessment recorded and sent to doctor');
       setFormData({
         patientId: '', blood_pressure: '', temperature: '', pulse: '', respiration: '', 
@@ -62,7 +77,13 @@ const TriageAssessment = () => {
       setSelectedVisit(null);
       fetchPatientVisits();
     } catch (err) {
-      toast.error('Failed to record triage assessment');
+      console.error('Nurse error submitting triage:', err);
+      if (err.response) {
+        console.error('Error response:', err.response.data);
+        toast.error(`Failed to record triage assessment: ${err.response.data.message || err.message}`);
+      } else {
+        toast.error(`Failed to record triage assessment: ${err.message}`);
+      }
     }
   };
 
