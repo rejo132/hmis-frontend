@@ -132,25 +132,108 @@ const BillingManagement = () => {
     setSelectedVisit(visit);
   };
 
-  const handleGenerateInvoice = () => {
-    if (patientServices.length === 0) {
-      toast.error('No services found for this patient');
+  const handleGenerateInvoice = async () => {
+    if (!selectedVisit) {
+      toast.error('No visit selected');
       return;
     }
 
-    const totalAmount = patientServices.reduce((sum, service) => sum + service.amount, 0);
-    const invoice = {
-      patientId: selectedPatient.id,
-      patientName: selectedPatient.name,
-      services: patientServices,
-      totalAmount,
-      invoiceNumber: `INV-${Date.now()}`,
-      generatedDate: new Date().toISOString(),
-      status: 'Pending'
-    };
+    try {
+      // Fetch patient details
+      const patient = patients.find(p => p.id === selectedVisit.patient_id);
+      if (!patient) {
+        toast.error('Patient not found');
+        return;
+      }
 
-    setGeneratedInvoice(invoice);
-    toast.success('Invoice generated successfully');
+      // Calculate services based on visit data
+      const services = [];
+      let totalAmount = 0;
+
+      // Add consultation fee
+      if (selectedVisit.diagnosis) {
+        services.push({
+          type: 'Consultation',
+          description: 'Doctor consultation and diagnosis',
+          amount: 5000,
+          date: selectedVisit.created_at
+        });
+        totalAmount += 5000;
+      }
+
+      // Add lab test fee
+      if (selectedVisit.lab_results) {
+        services.push({
+          type: 'Laboratory',
+          description: 'Laboratory tests and results',
+          amount: 3000,
+          date: selectedVisit.created_at
+        });
+        totalAmount += 3000;
+      }
+
+      // Add triage fee
+      if (selectedVisit.triage_notes) {
+        services.push({
+          type: 'Triage',
+          description: 'Nurse triage assessment',
+          amount: 2000,
+          date: selectedVisit.created_at
+        });
+        totalAmount += 2000;
+      }
+
+      // Add prescription fee
+      if (selectedVisit.prescription) {
+        services.push({
+          type: 'Pharmacy',
+          description: 'Medication and prescription',
+          amount: 4000,
+          date: selectedVisit.created_at
+        });
+        totalAmount += 4000;
+      }
+
+      // Call backend API to create invoice
+      const token = localStorage.getItem('access_token');
+      const API_BASE = 'http://localhost:5000';
+      
+      const invoiceData = {
+        patient_id: selectedVisit.patient_id,
+        visit_id: selectedVisit.id,
+        total_amount: totalAmount,
+        services: services
+      };
+
+      const response = await axios.post(`${API_BASE}/api/invoices`, invoiceData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      const backendInvoice = response.data;
+
+      const invoice = {
+        patientId: selectedVisit.patient_id,
+        patientName: patient.name,
+        visitId: selectedVisit.id,
+        services: services,
+        totalAmount: totalAmount,
+        invoiceNumber: backendInvoice.invoice_number,
+        generatedDate: backendInvoice.generated_at,
+        status: backendInvoice.status,
+        visitDetails: {
+          diagnosis: selectedVisit.diagnosis,
+          prescription: selectedVisit.prescription,
+          triageNotes: selectedVisit.triage_notes,
+          labResults: selectedVisit.lab_results
+        }
+      };
+
+      setGeneratedInvoice(invoice);
+      toast.success('Invoice generated successfully and saved to database');
+    } catch (err) {
+      console.error('Error generating invoice:', err);
+      toast.error('Failed to generate invoice');
+    }
   };
 
   const handleAcceptPayment = async (paymentMethod) => {
@@ -339,7 +422,30 @@ const BillingManagement = () => {
             <button className="btn-primary mb-4" onClick={handleGenerateReport} disabled={reportLoading}>
               {reportLoading ? 'Generating...' : 'Generate Billing Report'}
             </button>
+            <button className="btn-primary mb-4 ml-2" onClick={handleGenerateInvoice} disabled={!selectedVisit}>
+              Generate Invoice
+            </button>
             {reportError && <div className="text-red-600 mb-2">{reportError}</div>}
+            {generatedInvoice && (
+              <div className="p-4 border rounded bg-green-50 mb-4">
+                <div className="font-semibold mb-2">Generated Invoice</div>
+                <div>Invoice Number: {generatedInvoice.invoiceNumber}</div>
+                <div>Patient: {generatedInvoice.patientName}</div>
+                <div>Total Amount: KES {generatedInvoice.totalAmount.toLocaleString()}</div>
+                <div>Status: {generatedInvoice.status}</div>
+                <div>Generated: {new Date(generatedInvoice.generatedDate).toLocaleDateString()}</div>
+                <div className="mt-2">
+                  <strong>Services:</strong>
+                  <ul className="list-disc list-inside">
+                    {generatedInvoice.services.map((service, index) => (
+                      <li key={index}>
+                        {service.type}: {service.description} - KES {service.amount.toLocaleString()}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            )}
             {report && (
               <div className="p-4 border rounded bg-gray-50">
                 <div className="font-semibold mb-2">Summary</div>
