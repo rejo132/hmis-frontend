@@ -17,29 +17,27 @@ const TriageAssessment = () => {
     referral: '',
     testPreparation: '',
   });
-  const [queue, setQueue] = useState([]);
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientVisits, setPatientVisits] = useState([]);
+  const [selectedVisit, setSelectedVisit] = useState(null);
 
   useEffect(() => {
-    fetchQueue();
+    fetchPatientVisits();
   }, []);
 
-  const fetchQueue = async () => {
+  const fetchPatientVisits = async () => {
     try {
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
-      const res = await axios.get(`${API_BASE}/api/queue`, { 
-        headers: { Authorization: `Bearer ${token}` } 
-      });
-      setQueue(res.data.queue);
+      const res = await axios.get(`${API_BASE}/api/patient-visits`, { headers: { Authorization: `Bearer ${token}` } });
+      setPatientVisits(res.data.visits || []);
     } catch (err) {
-      toast.error('Failed to fetch patient queue');
+      toast.error('Failed to fetch patient visits');
     }
   };
 
-  const handlePatientSelect = (patient) => {
-    setSelectedPatient(patient);
-    setFormData(prev => ({ ...prev, patientId: patient.id }));
+  const handleVisitSelect = (visit) => {
+    setSelectedVisit(visit);
+    setFormData(prev => ({ ...prev, patientId: visit.patient_id }));
   };
 
   const handleChange = (e) => {
@@ -48,41 +46,21 @@ const TriageAssessment = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedVisit) return;
     try {
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
-      
-      // Record vitals
-      await axios.post(`${API_BASE}/api/vitals`, {
-        patient_id: formData.patientId,
-        blood_pressure: formData.blood_pressure,
-        temperature: formData.temperature,
-        pulse: formData.pulse,
-        respiration: formData.respiration,
+      // Update PatientVisit with triage notes and move to doctor stage
+      await axios.put(`${API_BASE}/api/patient-visits/${selectedVisit.id}`, {
+        triage_notes: `BP: ${formData.blood_pressure}, Temp: ${formData.temperature}, Pulse: ${formData.pulse}, Resp: ${formData.respiration}, Priority: ${formData.priority}, History: ${formData.history}, Allergies: ${formData.allergies}, Referral: ${formData.referral}, Prep: ${formData.testPreparation}`
       }, { headers: { Authorization: `Bearer ${token}` } });
-      
-      // Record medical history
-      await axios.post(`${API_BASE}/api/records`, {
-        patient_id: formData.patientId,
-        diagnosis: 'Triage Assessment',
-        prescription: '',
-        vital_signs: {
-          bp: formData.blood_pressure,
-          temperature: formData.temperature,
-          heart_rate: formData.pulse,
-          respiratory_rate: formData.respiration,
-        },
-        history: formData.history,
-        allergies: formData.allergies,
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      
-      toast.success('Triage assessment recorded');
+      toast.success('Triage assessment recorded and sent to doctor');
       setFormData({
         patientId: '', blood_pressure: '', temperature: '', pulse: '', respiration: '', 
         priority: 'Normal', history: '', allergies: '', referral: '', testPreparation: '',
       });
-      setSelectedPatient(null);
-      fetchQueue(); // Refresh queue
+      setSelectedVisit(null);
+      fetchPatientVisits();
     } catch (err) {
       toast.error('Failed to record triage assessment');
     }
@@ -92,51 +70,45 @@ const TriageAssessment = () => {
     <div className="container mx-auto p-4">
       <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <span className="text-lg font-bold text-blue-700 mr-4">Role: Nurse</span>
-        <span className="text-gray-700">Select patient from queue, record vitals, assign priority, and refer to doctor.</span>
+        <span className="text-gray-700">Select patient from workflow queue, record vitals, assign priority, and refer to doctor.</span>
       </div>
-      
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Patient Queue */}
+        {/* PatientVisit Queue */}
         <div>
-          <h3 className="text-xl font-semibold mb-4">Patient Queue</h3>
+          <h3 className="text-xl font-semibold mb-4">Patient Workflow Queue (Triage)</h3>
           <div className="bg-white border rounded-lg p-4">
-            {queue.length === 0 ? (
-              <p className="text-gray-500">No patients in queue.</p>
+            {patientVisits.length === 0 ? (
+              <p className="text-gray-500">No patients in triage queue.</p>
             ) : (
               <ul className="space-y-2">
-                {queue.map((patient) => (
+                {patientVisits.map((visit) => (
                   <li 
-                    key={patient.id} 
-                    className={`p-3 border rounded cursor-pointer transition-colors ${
-                      selectedPatient?.id === patient.id 
-                        ? 'bg-blue-100 border-blue-300' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => handlePatientSelect(patient)}
+                    key={visit.id} 
+                    className={`p-3 border rounded cursor-pointer transition-colors ${selectedVisit?.id === visit.id ? 'bg-blue-100 border-blue-300' : 'hover:bg-gray-50'}`}
+                    onClick={() => handleVisitSelect(visit)}
                   >
-                    <div className="font-medium">{patient.name}</div>
-                    <div className="text-sm text-gray-600">ID: {patient.id}</div>
-                    {patient.checked_in && (
-                      <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mt-1">
-                        Checked In
-                      </span>
-                    )}
+                    <div className="font-medium">Visit ID: {visit.id} | Patient ID: {visit.patient_id}</div>
+                    <div className="text-sm text-gray-600">Stage: {visit.current_stage}</div>
+                    {visit.triage_notes && <div className="text-xs text-gray-600">Triage: {visit.triage_notes}</div>}
                   </li>
                 ))}
               </ul>
             )}
           </div>
         </div>
-
         {/* Triage Assessment Form */}
         <div>
           <h3 className="text-xl font-semibold mb-4">Triage Assessment</h3>
-          {selectedPatient && (
+          {selectedVisit && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
-              <strong>Selected Patient:</strong> {selectedPatient.name} (ID: {selectedPatient.id})
+              <strong>Selected Visit:</strong> {selectedVisit.id} (Patient ID: {selectedVisit.patient_id})<br/>
+              {selectedVisit.triage_notes && <span className="text-xs text-gray-600">Previous Triage: {selectedVisit.triage_notes}</span>}
+              {selectedVisit.lab_results && <span className="text-xs text-gray-600">Lab: {selectedVisit.lab_results}</span>}
+              {selectedVisit.diagnosis && <span className="text-xs text-gray-600">Diagnosis: {selectedVisit.diagnosis}</span>}
+              {selectedVisit.prescription && <span className="text-xs text-gray-600">Prescription: {selectedVisit.prescription}</span>}
+              {selectedVisit.billing_status && <span className="text-xs text-gray-600">Billing: {selectedVisit.billing_status}</span>}
             </div>
           )}
-          
           <form onSubmit={handleSubmit} className="space-y-4 bg-white border rounded-lg p-4">
             <div>
               <label className="block text-sm font-medium text-gray-700">Patient ID</label>
@@ -147,7 +119,7 @@ const TriageAssessment = () => {
                 onChange={handleChange} 
                 className="w-full border p-2 rounded" 
                 required 
-                readOnly={!!selectedPatient}
+                readOnly={!!selectedVisit}
               />
             </div>
             
@@ -266,7 +238,7 @@ const TriageAssessment = () => {
             <button 
               type="submit" 
               className="w-full btn-primary"
-              disabled={!selectedPatient}
+              disabled={!selectedVisit}
             >
               Submit Assessment
             </button>

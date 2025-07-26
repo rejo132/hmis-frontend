@@ -15,7 +15,8 @@ const DoctorPortal = () => {
   const { appointments, error: appointmentError } = useSelector((state) => state.appointments);
   const { records, error: recordError } = useSelector((state) => state.records);
   
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [patientVisits, setPatientVisits] = useState([]);
+  const [selectedVisit, setSelectedVisit] = useState(null);
   const [consultationForm, setConsultationForm] = useState({
     diagnosis: '',
     prescription: '',
@@ -30,6 +31,7 @@ const DoctorPortal = () => {
       dispatch(fetchPatients(1));
       dispatch(fetchAppointments(1));
       dispatch(fetchRecords(1));
+      fetchPatientVisits();
     } else {
       navigate('/dashboard');
       toast.error('Unauthorized access');
@@ -42,9 +44,27 @@ const DoctorPortal = () => {
     if (recordError) toast.error(`Failed to load records: ${recordError}`);
   }, [patientError, appointmentError, recordError]);
 
-  const handlePatientSelect = (patient) => {
-    setSelectedPatient(patient);
+  const fetchPatientVisits = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const API_BASE = 'http://localhost:5000';
+      const res = await axios.get(`${API_BASE}/api/patient-visits`, { headers: { Authorization: `Bearer ${token}` } });
+      setPatientVisits(res.data.visits || []);
+    } catch (err) {
+      // handle error
+    }
+  };
+
+  const handleVisitSelect = (visit) => {
+    setSelectedVisit(visit);
     setShowConsultationForm(true);
+    setConsultationForm({
+      diagnosis: visit.diagnosis || '',
+      prescription: visit.prescription || '',
+      labTests: '',
+      notes: '',
+      followUp: '',
+    });
   };
 
   const handleConsultationChange = (e) => {
@@ -53,38 +73,24 @@ const DoctorPortal = () => {
 
   const handleConsultationSubmit = async (e) => {
     e.preventDefault();
+    if (!selectedVisit) return;
     try {
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
-      
-      // Update medical record with consultation
-      await axios.post(`${API_BASE}/api/records`, {
-        patient_id: selectedPatient.id,
+      // Update PatientVisit with diagnosis/prescription and move to next stage
+      await axios.put(`${API_BASE}/api/patient-visits/${selectedVisit.id}`, {
         diagnosis: consultationForm.diagnosis,
         prescription: consultationForm.prescription,
-        notes: consultationForm.notes,
-        doctor_id: user.id,
+        request_lab: !!consultationForm.labTests,
+        lab_results: consultationForm.labTests ? '' : undefined // If lab requested, clear lab_results
       }, { headers: { Authorization: `Bearer ${token}` } });
-
-      // If lab tests are ordered, create lab order
-      if (consultationForm.labTests) {
-        await axios.post(`${API_BASE}/api/lab-orders`, {
-          patient_id: selectedPatient.id,
-          test_type: consultationForm.labTests,
-          status: 'Ordered',
-          ordered_by: user.id,
-        }, { headers: { Authorization: `Bearer ${token}` } });
-      }
-
-      toast.success('Consultation completed and recorded');
+      toast.success('Consultation completed and sent to next stage');
       setConsultationForm({
         diagnosis: '', prescription: '', labTests: '', notes: '', followUp: '',
       });
-      setSelectedPatient(null);
+      setSelectedVisit(null);
       setShowConsultationForm(false);
-      
-      // Refresh data
-      dispatch(fetchRecords(1));
+      fetchPatientVisits();
     } catch (err) {
       toast.error('Failed to record consultation');
     }
@@ -113,69 +119,45 @@ const DoctorPortal = () => {
       <h2 className="text-3xl font-bold mb-6 text-gray-900">Doctor Portal</h2>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Patient List */}
+        {/* PatientVisit Queue */}
         <div>
-          <h3 className="text-xl font-semibold mb-4">Patient Cases</h3>
+          <h3 className="text-xl font-semibold mb-4">Patient Workflow Queue (Doctor)</h3>
           <div className="bg-white border rounded-lg p-4 max-h-96 overflow-y-auto">
-            {patients.length === 0 ? (
-              <p className="text-gray-500">No patients available.</p>
+            {patientVisits.length === 0 ? (
+              <p className="text-gray-500">No patients in doctor queue.</p>
             ) : (
               <div className="space-y-3">
-                {patients.map((patient) => {
-                  const patientRecords = getPatientRecords(patient.id);
-                  const patientAppointments = getPatientAppointments(patient.id);
-                  const hasTriage = patientRecords.some(r => r.diagnosis === 'Triage Assessment');
-                  
-                  return (
-                    <div 
-                      key={patient.id}
-                      className={`p-3 border rounded cursor-pointer transition-colors ${
-                        selectedPatient?.id === patient.id 
-                          ? 'bg-blue-100 border-blue-300' 
-                          : 'hover:bg-gray-50'
-                      }`}
-                      onClick={() => handlePatientSelect(patient)}
-                    >
-                      <div className="font-medium">{patient.name}</div>
-                      <div className="text-sm text-gray-600">ID: {patient.id}</div>
-                      <div className="text-sm text-gray-500">
-                        Records: {patientRecords.length} | Appointments: {patientAppointments.length}
-                      </div>
-                      {hasTriage && (
-                        <span className="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded mt-1">
-                          Triage Complete
-                        </span>
-                      )}
-                    </div>
-                  );
-                })}
+                {patientVisits.map((visit) => (
+                  <div 
+                    key={visit.id}
+                    className={`p-3 border rounded cursor-pointer transition-colors ${selectedVisit?.id === visit.id ? 'bg-blue-100 border-blue-300' : 'hover:bg-gray-50'}`}
+                    onClick={() => handleVisitSelect(visit)}
+                  >
+                    <div className="font-medium">Visit ID: {visit.id} | Patient ID: {visit.patient_id}</div>
+                    <div className="text-sm text-gray-600">Stage: {visit.current_stage}</div>
+                    {visit.triage_notes && <div className="text-xs text-gray-600">Triage: {visit.triage_notes}</div>}
+                    {visit.lab_results && <div className="text-xs text-gray-600">Lab: {visit.lab_results}</div>}
+                    {visit.diagnosis && <div className="text-xs text-gray-600">Diagnosis: {visit.diagnosis}</div>}
+                    {visit.prescription && <div className="text-xs text-gray-600">Prescription: {visit.prescription}</div>}
+                    {visit.billing_status && <div className="text-xs text-gray-600">Billing: {visit.billing_status}</div>}
+                  </div>
+                ))}
               </div>
             )}
           </div>
         </div>
-
         {/* Consultation Form */}
-        {showConsultationForm && selectedPatient && (
+        {showConsultationForm && selectedVisit && (
           <div>
             <h3 className="text-xl font-semibold mb-4">Consultation</h3>
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
-              <strong>Patient:</strong> {selectedPatient.name} (ID: {selectedPatient.id})
+              <strong>Selected Visit:</strong> {selectedVisit.id} (Patient ID: {selectedVisit.patient_id})<br/>
+              {selectedVisit.triage_notes && <span className="text-xs text-gray-600">Triage: {selectedVisit.triage_notes}</span>}<br/>
+              {selectedVisit.lab_results && <span className="text-xs text-gray-600">Lab: {selectedVisit.lab_results}</span>}<br/>
+              {selectedVisit.diagnosis && <span className="text-xs text-gray-600">Diagnosis: {selectedVisit.diagnosis}</span>}<br/>
+              {selectedVisit.prescription && <span className="text-xs text-gray-600">Prescription: {selectedVisit.prescription}</span>}<br/>
+              {selectedVisit.billing_status && <span className="text-xs text-gray-600">Billing: {selectedVisit.billing_status}</span>}
             </div>
-            
-            {/* Patient History */}
-            <div className="mb-4">
-              <h4 className="font-semibold mb-2">Patient History</h4>
-              <div className="bg-gray-50 p-3 rounded text-sm">
-                {getPatientRecords(selectedPatient.id).map((record, index) => (
-                  <div key={record.id} className="mb-2 pb-2 border-b last:border-b-0">
-                    <div className="font-medium">{record.diagnosis}</div>
-                    <div className="text-gray-600">{record.prescription}</div>
-                    <div className="text-gray-500 text-xs">{record.created_at}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
             <form onSubmit={handleConsultationSubmit} className="space-y-4 bg-white border rounded-lg p-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700">Diagnosis</label>
@@ -253,7 +235,7 @@ const DoctorPortal = () => {
                 <button 
                   type="button" 
                   onClick={() => {
-                    setSelectedPatient(null);
+                    setSelectedVisit(null);
                     setShowConsultationForm(false);
                     setConsultationForm({
                       diagnosis: '', prescription: '', labTests: '', notes: '', followUp: '',

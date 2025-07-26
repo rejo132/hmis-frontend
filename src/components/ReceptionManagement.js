@@ -27,6 +27,7 @@ const ReceptionManagement = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
+  const [patientVisits, setPatientVisits] = useState([]);
 
   useEffect(() => {
     // Allow both Admin and Receptionist roles
@@ -91,6 +92,21 @@ const ReceptionManagement = () => {
     return () => clearTimeout(timeout);
   }, [searchQuery]);
 
+  useEffect(() => {
+    fetchPatientVisits();
+  }, []);
+
+  const fetchPatientVisits = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const API_BASE = 'http://localhost:5000';
+      const res = await axios.get(`${API_BASE}/api/patient-visits`, { headers: { Authorization: `Bearer ${token}` } });
+      setPatientVisits(res.data.visits || []);
+    } catch (err) {
+      // handle error
+    }
+  };
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -110,8 +126,11 @@ const ReceptionManagement = () => {
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
       await axios.post(`${API_BASE}/api/queue`, { patient_id: result.id, name: formData.name }, { headers: { Authorization: `Bearer ${token}` } });
-      toast.success('Patient registered and added to queue');
+      // Create PatientVisit for workflow
+      await axios.post(`${API_BASE}/api/patient-visits`, { patient_id: result.id }, { headers: { Authorization: `Bearer ${token}` } });
+      toast.success('Patient registered, added to queue, and workflow started');
       setFormData({ ...formData, patientId: '', name: '', dob: '', gender: '' });
+      fetchPatientVisits();
     } catch (err) {
       toast.error(`Failed to register patient: ${err}`);
     }
@@ -323,6 +342,23 @@ const ReceptionManagement = () => {
                     Check-In
                   </button>
                 )}
+              </li>
+            ))
+          )}
+        </ul>
+        <h3 className="text-xl font-semibold mb-4">Patient Workflow Status</h3>
+        <ul className="space-y-2">
+          {patientVisits.length === 0 ? (
+            <li className="text-gray-500">No active patient visits.</li>
+          ) : (
+            patientVisits.map((visit) => (
+              <li key={visit.id} className="flex flex-col border rounded p-2 mb-2">
+                <span><strong>Visit ID:</strong> {visit.id} <strong>Patient ID:</strong> {visit.patient_id} <strong>Stage:</strong> {visit.current_stage}</span>
+                {visit.triage_notes && <span className="text-xs text-gray-600">Triage: {visit.triage_notes}</span>}
+                {visit.lab_results && <span className="text-xs text-gray-600">Lab: {visit.lab_results}</span>}
+                {visit.diagnosis && <span className="text-xs text-gray-600">Diagnosis: {visit.diagnosis}</span>}
+                {visit.prescription && <span className="text-xs text-gray-600">Prescription: {visit.prescription}</span>}
+                {visit.billing_status && <span className="text-xs text-gray-600">Billing: {visit.billing_status}</span>}
               </li>
             ))
           )}

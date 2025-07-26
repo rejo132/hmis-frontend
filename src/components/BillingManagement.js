@@ -23,9 +23,12 @@ const BillingManagement = () => {
   const [report, setReport] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
   const [reportError, setReportError] = useState(null);
+  const [patientVisits, setPatientVisits] = useState([]);
+  const [selectedVisit, setSelectedVisit] = useState(null);
 
   useEffect(() => {
     fetchPatients();
+    fetchPatientVisits();
   }, []);
 
   const fetchPatients = async () => {
@@ -38,6 +41,17 @@ const BillingManagement = () => {
       setPatients(res.data.patients || []);
     } catch (err) {
       toast.error('Failed to fetch patients');
+    }
+  };
+
+  const fetchPatientVisits = async () => {
+    try {
+      const token = localStorage.getItem('access_token');
+      const API_BASE = 'http://localhost:5000';
+      const res = await axios.get(`${API_BASE}/api/patient-visits`, { headers: { Authorization: `Bearer ${token}` } });
+      setPatientVisits(res.data.visits || []);
+    } catch (err) {
+      // handle error
     }
   };
 
@@ -114,6 +128,10 @@ const BillingManagement = () => {
     setGeneratedInvoice(null);
   };
 
+  const handleVisitSelect = (visit) => {
+    setSelectedVisit(visit);
+  };
+
   const handleGenerateInvoice = () => {
     if (patientServices.length === 0) {
       toast.error('No services found for this patient');
@@ -136,26 +154,19 @@ const BillingManagement = () => {
   };
 
   const handleAcceptPayment = async (paymentMethod) => {
-    if (!generatedInvoice) {
-      toast.error('No invoice to process payment for');
+    if (!selectedVisit) {
+      toast.error('No visit selected');
       return;
     }
-
     try {
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
-      
-      // Create bill record
-      await axios.post(`${API_BASE}/api/bills`, {
-        patient_id: generatedInvoice.patientId,
-        amount: generatedInvoice.totalAmount,
-        description: `Invoice ${generatedInvoice.invoiceNumber} - ${generatedInvoice.services.length} services`,
-        payment_status: 'Paid',
-        payment_method: paymentMethod,
-        processed_by: user.username
+      // Update PatientVisit billing_status to 'paid'
+      await axios.put(`${API_BASE}/api/patient-visits/${selectedVisit.id}`, {
+        billing_status: 'paid'
       }, { headers: { Authorization: `Bearer ${token}` } });
-
-      setGeneratedInvoice(prev => ({ ...prev, status: 'Paid' }));
+      setSelectedVisit(null);
+      fetchPatientVisits();
       toast.success(`Payment accepted via ${paymentMethod}`);
     } catch (err) {
       toast.error('Failed to process payment');
@@ -266,119 +277,55 @@ const BillingManagement = () => {
     <div className="container mx-auto p-4 animate-fade-in">
       <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
         <span className="text-lg font-bold text-blue-700 mr-4">Role: Billing Officer</span>
-        <span className="text-gray-700">Access patient service log, auto-generate invoice, accept payment, and mark invoice as paid.</span>
+        <span className="text-gray-700">Access patient workflow, auto-generate invoice, accept payment, and mark as paid.</span>
       </div>
-      
-      <h2 className="text-2xl font-bold mb-4">Billing Management</h2>
-      
+      <h2 className="text-2xl font-bold mb-4">Billing Workflow</h2>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Patient Selection */}
+        {/* PatientVisit Queue */}
         <div>
-          <h3 className="text-xl font-semibold mb-4">Patient Service Log</h3>
+          <h3 className="text-xl font-semibold mb-4">Patient Workflow Queue (Billing)</h3>
           <div className="bg-white border rounded-lg p-4 max-h-96 overflow-y-auto">
-            {patients.length === 0 ? (
-              <p className="text-gray-500">No patients available.</p>
+            {patientVisits.length === 0 ? (
+              <p className="text-gray-500">No patients in billing queue.</p>
             ) : (
               <div className="space-y-3">
-                {patients.map((patient) => (
+                {patientVisits.map((visit) => (
                   <div 
-                    key={patient.id}
-                    className={`p-3 border rounded cursor-pointer transition-colors ${
-                      selectedPatient?.id === patient.id 
-                        ? 'bg-blue-100 border-blue-300' 
-                        : 'hover:bg-gray-50'
-                    }`}
-                    onClick={() => handlePatientSelect(patient)}
+                    key={visit.id}
+                    className={`p-3 border rounded cursor-pointer transition-colors ${selectedVisit?.id === visit.id ? 'bg-blue-100 border-blue-300' : 'hover:bg-gray-50'}`}
+                    onClick={() => handleVisitSelect(visit)}
                   >
-                    <div className="font-medium">{patient.name}</div>
-                    <div className="text-sm text-gray-600">ID: {patient.id}</div>
-                    <div className="text-sm text-gray-500">Contact: {patient.contact || 'N/A'}</div>
+                    <div className="font-medium">Visit ID: {visit.id} | Patient ID: {visit.patient_id}</div>
+                    <div className="text-sm text-gray-600">Stage: {visit.current_stage}</div>
+                    {visit.triage_notes && <div className="text-xs text-gray-600">Triage: {visit.triage_notes}</div>}
+                    {visit.lab_results && <div className="text-xs text-gray-600">Lab: {visit.lab_results}</div>}
+                    {visit.diagnosis && <div className="text-xs text-gray-600">Diagnosis: {visit.diagnosis}</div>}
+                    {visit.prescription && <div className="text-xs text-gray-600">Prescription: {visit.prescription}</div>}
+                    {visit.billing_status && <div className="text-xs text-gray-600">Billing: {visit.billing_status}</div>}
                   </div>
                 ))}
               </div>
             )}
           </div>
         </div>
-
-        {/* Service Log and Invoice */}
+        {/* Payment Form */}
         <div>
-          <h3 className="text-xl font-semibold mb-4">Service Log & Invoice</h3>
-          {selectedPatient && (
+          <h3 className="text-xl font-semibold mb-4">Accept Payment</h3>
+          {selectedVisit && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
-              <strong>Selected Patient:</strong> {selectedPatient.name} (ID: {selectedPatient.id})
+              <strong>Selected Visit:</strong> {selectedVisit.id} (Patient ID: {selectedVisit.patient_id})<br/>
+              {selectedVisit.triage_notes && <span className="text-xs text-gray-600">Triage: {selectedVisit.triage_notes}</span>}<br/>
+              {selectedVisit.lab_results && <span className="text-xs text-gray-600">Lab: {selectedVisit.lab_results}</span>}<br/>
+              {selectedVisit.diagnosis && <span className="text-xs text-gray-600">Diagnosis: {selectedVisit.diagnosis}</span>}<br/>
+              {selectedVisit.prescription && <span className="text-xs text-gray-600">Prescription: {selectedVisit.prescription}</span>}<br/>
+              {selectedVisit.billing_status && <span className="text-xs text-gray-600">Billing: {selectedVisit.billing_status}</span>}
             </div>
           )}
-          
-          {patientServices.length > 0 && (
-            <div className="bg-white border rounded-lg p-4 mb-4">
-              <h4 className="font-semibold mb-2">Services Rendered</h4>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {patientServices.map((service) => (
-                  <div key={service.id} className="p-2 border rounded text-sm">
-                    <div className="font-medium">{service.type}: {service.description}</div>
-                    <div className="text-gray-600">Amount: KES {service.amount.toLocaleString()}</div>
-                    <div className="text-gray-500">Date: {service.date}</div>
-                    <div className="text-gray-500">Status: {service.status}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-3 pt-2 border-t">
-                <strong>Total Services: {patientServices.length}</strong>
-              </div>
-            </div>
-          )}
-
-          {selectedPatient && (
-            <div className="space-y-3">
-              <button 
-                onClick={handleGenerateInvoice}
-                className="w-full btn-primary"
-                disabled={patientServices.length === 0}
-              >
-                Generate Invoice
-              </button>
-            </div>
-          )}
-
-          {/* Generated Invoice */}
-          {generatedInvoice && (
-            <div className="mt-4 bg-white border rounded-lg p-4">
-              <h4 className="font-semibold mb-2">Generated Invoice</h4>
-              <div className="text-sm space-y-1 mb-3">
-                <div><strong>Invoice #:</strong> {generatedInvoice.invoiceNumber}</div>
-                <div><strong>Patient:</strong> {generatedInvoice.patientName}</div>
-                <div><strong>Total Amount:</strong> KES {generatedInvoice.totalAmount.toLocaleString()}</div>
-                <div><strong>Status:</strong> {generatedInvoice.status}</div>
-              </div>
-              
-              {generatedInvoice.status === 'Pending' && (
-                <div className="space-y-2">
-                  <button 
-                    onClick={() => handleAcceptPayment('Cash')}
-                    className="w-full btn-primary"
-                  >
-                    Accept Cash Payment
-                  </button>
-                  <button 
-                    onClick={() => handleAcceptPayment('M-Pesa')}
-                    className="w-full btn-secondary"
-                  >
-                    Accept M-Pesa Payment
-                  </button>
-                  <button 
-                    onClick={() => handleAcceptPayment('Card')}
-                    className="w-full btn-secondary"
-                  >
-                    Accept Card Payment
-                  </button>
-                </div>
-              )}
-              
-              {generatedInvoice.status === 'Paid' && (
-                <div className="p-2 bg-green-50 border border-green-200 rounded text-green-700">
-                  ✓ Payment completed successfully
-                </div>
-              )}
+          {selectedVisit && (
+            <div className="flex flex-col space-y-2">
+              <button className="btn-primary" onClick={() => handleAcceptPayment('Cash')}>Accept Cash</button>
+              <button className="btn-primary" onClick={() => handleAcceptPayment('Card')}>Accept Card</button>
+              <button className="btn-primary" onClick={() => handleAcceptPayment('Insurance')}>Accept Insurance</button>
             </div>
           )}
         </div>
