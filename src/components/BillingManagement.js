@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import { processRefund, submitClaim } from '../slices/billingSlice';
 import axios from 'axios';
+import { getBills } from '../api/api';
 
 const BillingManagement = () => {
   const dispatch = useDispatch();
@@ -20,6 +21,8 @@ const BillingManagement = () => {
     claimAmount: '',
   });
   const [report, setReport] = useState(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState(null);
 
   useEffect(() => {
     fetchPatients();
@@ -200,13 +203,63 @@ const BillingManagement = () => {
     }
   };
 
-  const handleGenerateReport = () => {
-    // Mock report logic
-    setReport({
-      totalIncome: 100000,
-      pendingPayments: 5000,
-      insuranceClaims: 20000,
-    });
+  const handleGenerateReport = async () => {
+    setReportLoading(true);
+    setReportError(null);
+    try {
+      let page = 1;
+      let allBills = [];
+      let hasMore = true;
+      while (hasMore) {
+        const res = await getBills(page);
+        allBills = allBills.concat(res.data.bills || []);
+        if (res.data.page >= res.data.pages) {
+          hasMore = false;
+        } else {
+          page++;
+        }
+      }
+      // Calculate totals
+      let totalIncome = 0;
+      let pendingPayments = 0;
+      let insuranceClaims = 0;
+      let refunded = 0;
+      let paid = 0;
+      let claimed = 0;
+      allBills.forEach(bill => {
+        const amount = Number(bill.amount) || 0;
+        if (bill.payment_status === 'Paid') {
+          totalIncome += amount;
+          paid += amount;
+        } else if (bill.payment_status === 'Pending') {
+          pendingPayments += amount;
+        } else if (bill.payment_status === 'Claimed') {
+          insuranceClaims += amount;
+          claimed += amount;
+        } else if (bill.payment_status === 'Refunded') {
+          refunded += amount;
+        }
+      });
+      setReport({
+        totalIncome,
+        pendingPayments,
+        insuranceClaims,
+        refunded,
+        paid,
+        claimed,
+        totalBills: allBills.length,
+        billsByStatus: {
+          Paid: paid,
+          Pending: pendingPayments,
+          Claimed: claimed,
+          Refunded: refunded,
+        },
+      });
+    } catch (err) {
+      setReportError('Failed to generate report');
+    } finally {
+      setReportLoading(false);
+    }
   };
 
   return (
@@ -336,14 +389,35 @@ const BillingManagement = () => {
         <h3 className="text-xl font-semibold mb-4">Reports & Other Functions</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
-            <button className="btn-primary mb-4" onClick={handleGenerateReport}>
-              Generate Billing Report
+            <button className="btn-primary mb-4" onClick={handleGenerateReport} disabled={reportLoading}>
+              {reportLoading ? 'Generating...' : 'Generate Billing Report'}
             </button>
+            {reportError && <div className="text-red-600 mb-2">{reportError}</div>}
             {report && (
               <div className="p-4 border rounded bg-gray-50">
-                <div>Total Income: KES {report.totalIncome.toLocaleString()}</div>
+                <div className="font-semibold mb-2">Summary</div>
+                <div>Total Bills: {report.totalBills}</div>
+                <div>Total Income (Paid): KES {report.totalIncome.toLocaleString()}</div>
                 <div>Pending Payments: KES {report.pendingPayments.toLocaleString()}</div>
                 <div>Insurance Claims: KES {report.insuranceClaims.toLocaleString()}</div>
+                <div>Refunded: KES {report.refunded.toLocaleString()}</div>
+                <div className="mt-3 font-semibold">Breakdown by Status</div>
+                <table className="w-full text-sm mt-2 border">
+                  <thead>
+                    <tr className="bg-gray-200">
+                      <th className="p-1 border">Status</th>
+                      <th className="p-1 border">Total (KES)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(report.billsByStatus).map(([status, amount]) => (
+                      <tr key={status}>
+                        <td className="p-1 border">{status}</td>
+                        <td className="p-1 border">{amount.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
           </div>
