@@ -40,14 +40,14 @@ const InventoryManagement = () => {
     try {
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
-      const res = await axios.get(`${API_BASE}/api/records`, { 
+      const res = await axios.get(`${API_BASE}/api/patient-visits`, { 
         headers: { Authorization: `Bearer ${token}` } 
       });
-      // Filter records that have prescriptions
-      const recordsWithPrescriptions = (res.data.records || []).filter(record => 
-        record.prescription && record.prescription.trim() !== ''
+      // Filter PatientVisit records that are in pharmacy stage and have prescriptions
+      const visitsWithPrescriptions = (res.data.visits || []).filter(visit => 
+        visit.current_stage === 'pharmacy' && visit.prescription && visit.prescription.trim() !== ''
       );
-      setPrescriptions(recordsWithPrescriptions);
+      setPrescriptions(visitsWithPrescriptions);
     } catch (err) {
       toast.error('Failed to fetch prescriptions');
     }
@@ -81,7 +81,17 @@ const InventoryManagement = () => {
         dosageInstructions,
         prescriptionId: selectedPrescription?.id
       })).unwrap();
-      toast.success('Medication dispensed successfully');
+      
+      // Update PatientVisit to move to billing stage
+      if (selectedPrescription) {
+        const token = localStorage.getItem('access_token');
+        const API_BASE = 'http://localhost:5000';
+        await axios.put(`${API_BASE}/api/patient-visits/${selectedPrescription.id}`, {}, { 
+          headers: { Authorization: `Bearer ${token}` } 
+        });
+      }
+      
+      toast.success('Medication dispensed successfully and patient moved to billing stage');
       setDispenseForm({ itemId: '', quantity: '', patientId: '' });
       setCounselingNote('');
       setInteractionAlert('');
@@ -132,9 +142,12 @@ const InventoryManagement = () => {
                     }`}
                     onClick={() => handlePrescriptionSelect(prescription)}
                   >
-                    <div className="font-medium">Patient ID: {prescription.patient_id}</div>
+                    <div className="font-medium">Visit ID: {prescription.id} | Patient ID: {prescription.patient_id}</div>
+                    <div className="text-sm text-gray-600">Stage: {prescription.current_stage}</div>
                     <div className="text-sm text-gray-600">Prescription: {prescription.prescription}</div>
                     <div className="text-sm text-gray-500">Diagnosis: {prescription.diagnosis}</div>
+                    {prescription.triage_notes && <div className="text-xs text-gray-600">Triage: {prescription.triage_notes}</div>}
+                    {prescription.lab_results && <div className="text-xs text-gray-600">Lab: {prescription.lab_results}</div>}
                     <div className="text-sm text-gray-500">Date: {prescription.created_at}</div>
                   </div>
                 ))}
@@ -148,8 +161,12 @@ const InventoryManagement = () => {
           <h3 className="text-xl font-semibold mb-4">Dispense Medication</h3>
           {selectedPrescription && (
             <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded">
-              <strong>Selected Prescription:</strong> Patient {selectedPrescription.patient_id}
-              <div className="text-sm mt-1">{selectedPrescription.prescription}</div>
+              <strong>Selected Visit:</strong> {selectedPrescription.id} (Patient ID: {selectedPrescription.patient_id})<br/>
+              <strong>Stage:</strong> {selectedPrescription.current_stage}<br/>
+              {selectedPrescription.triage_notes && <span className="text-xs text-gray-600">Triage: {selectedPrescription.triage_notes}</span>}<br/>
+              {selectedPrescription.lab_results && <span className="text-xs text-gray-600">Lab: {selectedPrescription.lab_results}</span>}<br/>
+              {selectedPrescription.diagnosis && <span className="text-xs text-gray-600">Diagnosis: {selectedPrescription.diagnosis}</span>}<br/>
+              <strong>Prescription:</strong> {selectedPrescription.prescription}
             </div>
           )}
           
