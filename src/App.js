@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, NavLink } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { loadTokenFromStorage } from './slices/authSlice';
+import { initializeTheme } from './slices/themeSlice';
 import DarkModeToggle from './components/DarkModeToggle';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import GlobalSearch from './components/GlobalSearch';
@@ -48,6 +49,11 @@ const App = () => {
   // Load token from localStorage on app startup
   useEffect(() => {
     dispatch(loadTokenFromStorage());
+  }, [dispatch]);
+
+  // Initialize theme on app startup
+  useEffect(() => {
+    dispatch(initializeTheme());
   }, [dispatch]);
 
   // Apply dark mode class to document

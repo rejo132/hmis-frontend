@@ -1,11 +1,39 @@
 // src/components/Login.js
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { login } from '../slices/authSlice';
 import toast from 'react-hot-toast';
 import Register from './Register';
 
+// Typewriter Effect Component
+const Typewriter = ({ text, speed = 100, className = "" }) => {
+  const [displayText, setDisplayText] = useState('');
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  useEffect(() => {
+    if (currentIndex < text.length) {
+      const timer = setTimeout(() => {
+        setDisplayText(prev => prev + text[currentIndex]);
+        setCurrentIndex(prev => prev + 1);
+      }, speed);
+      return () => clearTimeout(timer);
+    }
+  }, [currentIndex, text, speed]);
+
+  // Reset typewriter when text changes
+  useEffect(() => {
+    setDisplayText('');
+    setCurrentIndex(0);
+  }, [text]);
+
+  return (
+    <h1 className={`${className} typewriter-text`}>
+      {displayText}
+      <span className="animate-blink">|</span>
+    </h1>
+  );
+};
 
 // Live Clock component
 const LiveClock = () => {
@@ -20,7 +48,7 @@ const LiveClock = () => {
   const seconds = pad(now.getSeconds());
   const date = now.toLocaleDateString();
   return (
-    <div className="text-right text-xs text-white/80 font-mono mb-2 select-none">
+    <div className="text-right text-xs text-white/80 dark:text-gray-300/80 font-mono mb-2 select-none">
       <span>{date} </span>
       <span className="animate-blink">{hours}:{minutes}</span>
       <span>:{seconds}</span>
@@ -46,6 +74,7 @@ const Login = () => {
   const dispatch = useDispatch();
   const navigate = useNavigate();
   const { user } = useSelector((state) => state.auth);
+  const { isDarkMode } = useSelector((state) => state.theme);
 
   const [formData, setFormData] = useState({
     username: '',
@@ -56,6 +85,15 @@ const Login = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showRegister, setShowRegister] = useState(false);
   const [selectedRole, setSelectedRole] = useState('');
+
+  // Apply dark mode to document
+  useEffect(() => {
+    if (isDarkMode) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isDarkMode]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -148,13 +186,73 @@ const Login = () => {
           background-size: 1200% 1200%;
           animation: gradientMove 16s ease infinite;
         }
+        
+        .dark .animated-gradient-bg {
+          background: linear-gradient(270deg, #0f172a, #1e293b, #334155, #475569, #0f172a);
+          background-size: 1200% 1200%;
+          animation: gradientMove 16s ease infinite;
+        }
+        
         @keyframes gradientMove {
           0% { background-position: 0% 50%; }
           50% { background-position: 100% 50%; }
           100% { background-position: 0% 50%; }
         }
-        .animate-blink { animation: blink 1s steps(2, start) infinite; }
-        @keyframes blink { to { visibility: hidden; } }
+        
+        .animate-blink { 
+          animation: blink 1s steps(2, start) infinite; 
+        }
+        
+        @keyframes blink { 
+          to { visibility: hidden; } 
+        }
+        
+        .typewriter-text {
+          overflow: hidden;
+          border-right: 2px solid transparent;
+          white-space: nowrap;
+          margin: 0 auto;
+        }
+        
+        .dark .typewriter-text {
+          border-right-color: rgba(255, 255, 255, 0.75);
+        }
+        
+        .glass-card {
+          backdrop-filter: blur(16px);
+          -webkit-backdrop-filter: blur(16px);
+          background: rgba(255, 255, 255, 0.1);
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        
+        .dark .glass-card {
+          background: rgba(0, 0, 0, 0.2);
+          border: 1px solid rgba(255, 255, 255, 0.1);
+          box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+        
+        .animate-float {
+          animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-20px); }
+        }
+        
+        .bg-grid-pattern {
+          background-image: 
+            linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+          background-size: 20px 20px;
+        }
+        
+        .dark .bg-grid-pattern {
+          background-image: 
+            linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+        }
       `}</style>
       {/* Main Content: Responsive Two-Column Layout */}
       <div className="relative z-10 w-full max-w-6xl mx-auto px-4 flex flex-col lg:flex-row items-center justify-center gap-12">
@@ -177,9 +275,7 @@ const Login = () => {
                 </span>
           </div>
           {/* Typing effect for welcome message */}
-          <h1 className="text-4xl lg:text-5xl font-bold text-white leading-tight mt-4">
-            Welcome to MediCure
-          </h1>
+          <Typewriter text="Welcome to MediCure" speed={50} className="text-4xl lg:text-5xl font-bold text-white leading-tight mt-4" />
           {/* Hero Animation (SVG or Lottie) */}
           <div className="w-48 h-48 mx-auto lg:mx-0">
             {/* Example: animated heartbeat SVG */}
@@ -203,7 +299,11 @@ const Login = () => {
                 <button
                   key={role.label}
                   type="button"
-                  className={`flex items-center px-3 py-1 rounded-full border transition-all text-xs font-semibold ${selectedRole === role.label ? 'bg-primary-600 text-white shadow' : 'bg-white/30 text-primary-700 border-primary-200 hover:bg-primary-100'}`}
+                  className={`flex items-center px-3 py-1 rounded-full border transition-all text-xs font-semibold ${
+                    selectedRole === role.label 
+                      ? 'bg-primary-600 text-white shadow-lg dark:bg-primary-500 dark:shadow-primary-500/25' 
+                      : 'bg-white/30 dark:bg-gray-800/30 text-primary-700 dark:text-primary-300 border-primary-200 dark:border-primary-600 hover:bg-primary-100 dark:hover:bg-primary-900/50'
+                  }`}
                   onClick={() => setSelectedRole(role.label)}
                 >
                   {role.icon}
@@ -214,13 +314,21 @@ const Login = () => {
             {/* Tabs for Login/Register */}
             <div className="flex justify-center mb-6">
               <button
-                className={`px-6 py-2 rounded-t-lg font-semibold focus:outline-none transition-all ${!showRegister ? 'bg-primary-600 text-white shadow' : 'bg-white/30 text-primary-700'}`}
+                className={`px-6 py-2 rounded-t-lg font-semibold focus:outline-none transition-all ${
+                  !showRegister 
+                    ? 'bg-primary-600 text-white shadow-lg dark:bg-primary-500 dark:shadow-primary-500/25' 
+                    : 'bg-white/30 dark:bg-gray-800/30 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50'
+                }`}
                 onClick={() => setShowRegister(false)}
               >
                 Login
               </button>
               <button
-                className={`px-6 py-2 rounded-t-lg font-semibold focus:outline-none transition-all ${showRegister ? 'bg-primary-600 text-white shadow' : 'bg-white/30 text-primary-700'}`}
+                className={`px-6 py-2 rounded-t-lg font-semibold focus:outline-none transition-all ${
+                  showRegister 
+                    ? 'bg-primary-600 text-white shadow-lg dark:bg-primary-500 dark:shadow-primary-500/25' 
+                    : 'bg-white/30 dark:bg-gray-800/30 text-primary-700 dark:text-primary-300 hover:bg-primary-100 dark:hover:bg-primary-900/50'
+                }`}
                 onClick={() => setShowRegister(true)}
               >
                 Register
@@ -310,7 +418,7 @@ const Login = () => {
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className="w-full bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-primary-100 dark:focus:ring-primary-900 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 shadow-lg"
+                    className="w-full bg-gradient-to-r from-primary-600 to-secondary-600 hover:from-primary-700 hover:to-secondary-700 dark:from-primary-500 dark:to-secondary-500 dark:hover:from-primary-600 dark:hover:to-secondary-600 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-4 focus:ring-primary-100 dark:focus:ring-primary-900/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2 shadow-lg dark:shadow-primary-500/25"
                   >
                     {isLoading ? (
                       <>
@@ -331,28 +439,28 @@ const Login = () => {
                   </button>
                 </form>
                 {/* Demo Credentials - visually distinct */}
-                <details className="mt-6 p-4 bg-white/60 dark:bg-gray-800/60 rounded-lg border border-gray-200/50 dark:border-gray-700/50 shadow-inner" open>
-                  <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 cursor-pointer">Demo Credentials</summary>
+                <details className="mt-6 p-4 bg-white/60 dark:bg-gray-800/60 rounded-lg border border-gray-200/50 dark:border-gray-700/50 shadow-inner backdrop-blur-sm" open>
+                  <summary className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 cursor-pointer hover:text-primary-600 dark:hover:text-primary-400 transition-colors">Demo Credentials</summary>
                   <div className="grid grid-cols-2 gap-2 text-xs pt-2">
                     <div className="space-y-1">
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
                         <span className="font-medium">Admin:</span> admin/admin123
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
                         <span className="font-medium">Doctor:</span> doctor/doctor123
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
                         <span className="font-medium">Nurse:</span> nurse/nurse123
                       </p>
                     </div>
                     <div className="space-y-1">
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
                         <span className="font-medium">Patient:</span> patient/patient123
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
                         <span className="font-medium">Lab:</span> lab/lab123
                       </p>
-                      <p className="text-gray-600 dark:text-gray-400">
+                      <p className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 transition-colors">
                         <span className="font-medium">Billing:</span> billing/billing123
                       </p>
                     </div>
