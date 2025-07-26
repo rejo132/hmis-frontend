@@ -276,8 +276,8 @@ const DoctorPortal = () => {
                     <td className="p-3">
                       <button
                         onClick={() => {
-                          const patient = patients.find(p => p.id === appt.patient_id);
-                          if (patient) handlePatientSelect(patient);
+                          const visit = patientVisits.find(v => v.patient_id === appt.patient_id);
+                          if (visit) handleVisitSelect(visit);
                         }}
                         className="btn-primary text-sm"
                       >
