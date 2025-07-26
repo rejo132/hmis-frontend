@@ -26,6 +26,7 @@ const ReceptionManagement = () => {
   const [checkedIn, setCheckedIn] = useState({});
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
 
   useEffect(() => {
     // Allow both Admin and Receptionist roles
@@ -66,6 +67,30 @@ const ReceptionManagement = () => {
     fetchDoctors();
   }, []);
 
+  useEffect(() => {
+    if (searchQuery.trim() === '') {
+      setSearchResults([]);
+      return;
+    }
+    setSearching(true);
+    const timeout = setTimeout(async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const API_BASE = 'http://localhost:5000';
+        const res = await axios.get(`${API_BASE}/api/patients`, {
+          headers: { Authorization: `Bearer ${token}` },
+          params: { q: searchQuery }
+        });
+        setSearchResults(res.data.patients);
+      } catch (err) {
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    }, 400);
+    return () => clearTimeout(timeout);
+  }, [searchQuery]);
+
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
@@ -73,7 +98,7 @@ const ReceptionManagement = () => {
   const handlePatientSubmit = async (e) => {
     e.preventDefault();
     try {
-      await dispatch(addPatient({
+      const result = await dispatch(addPatient({
         name: formData.name,
         dob: formData.dob,
         gender: formData.gender,
@@ -81,10 +106,10 @@ const ReceptionManagement = () => {
         address: '', // Add default address
         registered_by: user.username,
       })).unwrap();
-      // Add to queue
+      // Add to queue with the actual patient ID from the response
       const token = localStorage.getItem('access_token');
       const API_BASE = 'http://localhost:5000';
-      await axios.post(`${API_BASE}/api/queue`, { patient_id: formData.patientId, name: formData.name }, { headers: { Authorization: `Bearer ${token}` } });
+      await axios.post(`${API_BASE}/api/queue`, { patient_id: result.id, name: formData.name }, { headers: { Authorization: `Bearer ${token}` } });
       toast.success('Patient registered and added to queue');
       setFormData({ ...formData, patientId: '', name: '', dob: '', gender: '' });
     } catch (err) {
@@ -127,19 +152,14 @@ const ReceptionManagement = () => {
     } catch (err) {}
   };
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    try {
-      const token = localStorage.getItem('access_token');
-      const API_BASE = 'http://localhost:5000';
-      const res = await axios.get(`${API_BASE}/api/patients`, {
-        headers: { Authorization: `Bearer ${token}` },
-        params: { q: searchQuery }
-      });
-      setSearchResults(res.data.patients);
-    } catch (err) {
-      toast.error('Search failed');
-    }
+  const handleSearchSelect = (patient) => {
+    setFormData(prev => ({
+      ...prev,
+      patientId: patient.id,
+      name: patient.name,
+      dob: patient.dob,
+      gender: patient.gender || '',
+    }));
   };
 
   return (
@@ -245,10 +265,13 @@ const ReceptionManagement = () => {
                 required
               >
                 <option value="">Select Doctor</option>
-                {doctors.map((doc) => (
-                  <option key={doc.id} value={doc.id}>{doc.username}</option>
-                ))}
+                {doctors.length === 0 ? (
+                  <option value="" disabled>No doctors available</option>
+                ) : (
+                  doctors.map((doc) => (<option key={doc.id} value={doc.id}>{doc.username}</option>))
+                )}
               </select>
+              {doctors.length === 0 && <div className="text-xs text-red-500 mt-1">No doctors available. Please add doctors in the Admin panel.</div>}
             </div>
             <button
               type="submit"
@@ -261,7 +284,7 @@ const ReceptionManagement = () => {
         </div>
       </div>
       <div className="mb-8">
-        <form onSubmit={handleSearch} className="flex space-x-2 mb-2">
+        <div className="mb-2">
           <input
             type="text"
             placeholder="Search patient by name, contact, or ID"
@@ -269,20 +292,20 @@ const ReceptionManagement = () => {
             onChange={e => setSearchQuery(e.target.value)}
             className="p-2 border rounded w-full"
           />
-          <button type="submit" className="btn-primary">Search</button>
-        </form>
-        {searchResults.length > 0 && (
-          <div className="bg-white border rounded p-2">
-            <h4 className="font-semibold mb-2">Search Results</h4>
-            <ul>
-              {searchResults.map(p => (
-                <li key={p.id} className="py-1 border-b last:border-b-0">
-                  ID: {p.id} | {p.name} | {p.contact}
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
+          {searching && <div className="text-xs text-gray-400">Searching...</div>}
+          {searchResults.length > 0 && (
+            <div className="bg-white border rounded p-2 mt-1 max-h-40 overflow-y-auto">
+              <h4 className="font-semibold mb-2">Search Results</h4>
+              <ul>
+                {searchResults.map(p => (
+                  <li key={p.id} className="py-1 border-b last:border-b-0 cursor-pointer hover:bg-blue-50" onClick={() => handleSearchSelect(p)}>
+                    <div><strong>ID:</strong> {p.id} <strong>Name:</strong> {p.name} <strong>DOB:</strong> {p.dob} <strong>Contact:</strong> {p.contact}</div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
         <h3 className="text-xl font-semibold mb-4">Patient Queue</h3>
         <ul className="space-y-2">
           {queue.length === 0 ? (
