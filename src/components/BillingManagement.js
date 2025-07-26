@@ -8,10 +8,7 @@ import { getBills } from '../api/api';
 const BillingManagement = () => {
   const dispatch = useDispatch();
   const { user, access_token } = useSelector((state) => state.auth);
-  const { status, error } = useSelector((state) => state.billing || {});
   const [patients, setPatients] = useState([]);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [patientServices, setPatientServices] = useState([]);
   const [generatedInvoice, setGeneratedInvoice] = useState(null);
   const [formData, setFormData] = useState({
     billId: '',
@@ -53,79 +50,6 @@ const BillingManagement = () => {
     } catch (err) {
       // handle error
     }
-  };
-
-  const fetchPatientServices = async (patientId) => {
-    try {
-      const token = localStorage.getItem('access_token');
-      const API_BASE = 'http://localhost:5000';
-      
-      // Fetch appointments, records, and lab orders for the patient
-      const [appointmentsRes, recordsRes, labOrdersRes] = await Promise.all([
-        axios.get(`${API_BASE}/api/appointments`, { 
-          headers: { Authorization: `Bearer ${token}` },
-          params: { patient_id: patientId }
-        }),
-        axios.get(`${API_BASE}/api/records`, { 
-          headers: { Authorization: `Bearer ${token}` },
-          params: { patient_id: patientId }
-        }),
-        axios.get(`${API_BASE}/api/lab-orders`, { 
-          headers: { Authorization: `Bearer ${token}` },
-          params: { patient_id: patientId }
-        })
-      ]);
-
-      const services = [];
-      
-      // Add appointments
-      (appointmentsRes.data.appointments || []).forEach(appt => {
-        services.push({
-          id: `appt_${appt.id}`,
-          type: 'Consultation',
-          description: `Doctor consultation on ${appt.appointment_time}`,
-          amount: 5000, // Mock amount
-          date: appt.appointment_time,
-          status: 'Completed'
-        });
-      });
-
-      // Add lab tests
-      (labOrdersRes.data.lab_orders || []).forEach(lab => {
-        services.push({
-          id: `lab_${lab.id}`,
-          type: 'Laboratory',
-          description: `${lab.test_type}`,
-          amount: 3000, // Mock amount
-          date: lab.created_at,
-          status: lab.status
-        });
-      });
-
-      // Add prescriptions
-      (recordsRes.data.records || []).forEach(record => {
-        if (record.prescription) {
-          services.push({
-            id: `presc_${record.id}`,
-            type: 'Pharmacy',
-            description: `Medication: ${record.prescription}`,
-            amount: 2000, // Mock amount
-            date: record.created_at,
-            status: 'Prescribed'
-          });
-        }
-      });
-
-      setPatientServices(services);
-    } catch (err) {
-      toast.error('Failed to fetch patient services');
-    }
-  };
-
-  const handlePatientSelect = (patient) => {
-    setSelectedPatient(patient);
-    fetchPatientServices(patient.id);
-    setGeneratedInvoice(null);
   };
 
   const handleVisitSelect = (visit) => {
@@ -211,7 +135,7 @@ const BillingManagement = () => {
 
       const backendInvoice = response.data;
 
-      const invoice = {
+    const invoice = {
         patientId: selectedVisit.patient_id,
         patientName: patient.name,
         visitId: selectedVisit.id,
@@ -226,9 +150,9 @@ const BillingManagement = () => {
           triageNotes: selectedVisit.triage_notes,
           labResults: selectedVisit.lab_results
         }
-      };
+    };
 
-      setGeneratedInvoice(invoice);
+    setGeneratedInvoice(invoice);
       toast.success('Invoice generated successfully and saved to database');
     } catch (err) {
       console.error('Error generating invoice:', err);
