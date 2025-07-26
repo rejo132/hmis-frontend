@@ -323,6 +323,14 @@ const App = () => {
                       {(user?.role === 'Nurse') && (
                         <>
                           <li>
+                            <NavLink to="/triage" className={({ isActive }) => `flex items-center py-2 px-3 rounded-md hover:bg-opacity-80 transition-colors ${isActive ? 'bg-white bg-opacity-20' : ''}`}>
+                              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                              </svg>
+                              Triage
+                            </NavLink>
+                          </li>
+                          <li>
                             <NavLink to="/vitals" className={({ isActive }) => `flex items-center py-2 px-3 rounded-md hover:bg-opacity-80 transition-colors ${isActive ? 'bg-white bg-opacity-20' : ''}`}>
                               <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path>
@@ -637,6 +645,14 @@ const App = () => {
                     </li>
                     {(user?.role === 'Nurse') && (
                       <>
+                        <li>
+                          <NavLink to="/triage" className={({ isActive }) => `flex flex-col items-center py-2 ${isActive ? 'bg-white bg-opacity-20' : ''}`}>
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                            </svg>
+                            Triage
+                          </NavLink>
+                        </li>
                         <li>
                           <NavLink to="/vitals" className={({ isActive }) => `flex flex-col items-center py-2 ${isActive ? 'bg-white bg-opacity-20' : ''}`}>
                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
