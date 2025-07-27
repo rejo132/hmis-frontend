@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate, NavLink } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { fetchPatients } from '../slices/patientSlice';
 import { fetchAppointments } from '../slices/appointmentSlice';
@@ -11,9 +11,9 @@ const DoctorPortal = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
-  const { patients, error: patientError } = useSelector((state) => state.patients);
+  const { error: patientError } = useSelector((state) => state.patients);
   const { appointments, error: appointmentError } = useSelector((state) => state.appointments);
-  const { records, error: recordError } = useSelector((state) => state.records);
+  const { error: recordError } = useSelector((state) => state.records);
   
   const [patientVisits, setPatientVisits] = useState([]);
   const [selectedVisit, setSelectedVisit] = useState(null);
@@ -94,19 +94,6 @@ const DoctorPortal = () => {
     } catch (err) {
       toast.error('Failed to record consultation');
     }
-  };
-
-  const handleReviewTest = (recordId) => {
-    toast.success(`Review Initiated for Record ${recordId}`);
-    // TODO: Implement backend endpoint POST /records/review
-  };
-
-  const getPatientRecords = (patientId) => {
-    return records.filter(r => r.patient_id === patientId);
-  };
-
-  const getPatientAppointments = (patientId) => {
-    return appointments.filter(a => a.patient_id === patientId);
   };
 
   return (

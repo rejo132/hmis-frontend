@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import toast from 'react-hot-toast';
 import { addLabOrder } from '../slices/labSlice';
 import axios from 'axios';
@@ -8,7 +8,6 @@ import axios from 'axios';
 const LabOrderForm = () => {
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const { user } = useSelector((state) => state.auth);
   const [labOrders, setLabOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [patientVisits, setPatientVisits] = useState([]);
@@ -20,9 +19,6 @@ const LabOrderForm = () => {
     sample_collected: false,
     results: '',
   });
-  const [validated, setValidated] = useState(false);
-  const [labReport, setLabReport] = useState(null);
-  const [showResultsForm, setShowResultsForm] = useState(false);
 
   useEffect(() => {
     fetchLabOrders();
@@ -67,30 +63,10 @@ const LabOrderForm = () => {
   const handleVisitSelect = (visit) => {
     setSelectedVisit(visit);
     setFormData({ results: visit.lab_results || '' });
-    setShowResultsForm(false);
   };
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleCollectSample = async () => {
-    try {
-      const token = localStorage.getItem('access_token');
-      const API_BASE = 'http://localhost:5000';
-      
-      await axios.put(`${API_BASE}/api/lab-orders/${selectedOrder.id}`, {
-        sample_collected: true,
-        status: 'Sample Collected',
-        collected_by: user.id,
-        collection_time: new Date().toISOString(),
-      }, { headers: { Authorization: `Bearer ${token}` } });
-      
-      toast.success('Sample collected successfully');
-      fetchLabOrders();
-    } catch (err) {
-      toast.error('Failed to update sample collection');
-    }
   };
 
   const handleUploadResults = async (e) => {
@@ -104,26 +80,11 @@ const LabOrderForm = () => {
         lab_results: formData.results
       }, { headers: { Authorization: `Bearer ${token}` } });
       toast.success('Lab results uploaded and sent to doctor');
-      setShowResultsForm(false);
       setSelectedVisit(null);
       fetchPatientVisits();
     } catch (err) {
       toast.error('Failed to upload results');
     }
-  };
-
-  const handleValidate = () => {
-    setValidated(true);
-    toast.success('Result validated');
-  };
-
-  const handleGenerateLabReport = () => {
-    setLabReport({
-      totalTests: 50,
-      positive: 10,
-      negative: 40,
-      avgTurnaround: '2h',
-    });
   };
 
   const handleSubmit = async (e) => {

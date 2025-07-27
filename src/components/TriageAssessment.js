@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useSelector } from 'react-redux';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const TriageAssessment = () => {
-  const { user } = useSelector((state) => state.auth);
   const [formData, setFormData] = useState({
     patientId: '',
     blood_pressure: '',
